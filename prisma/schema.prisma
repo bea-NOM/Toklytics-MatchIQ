@@ -1,5 +1,11 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 enum Role { viewer creator agency admin }
 enum BoosterType { MULTIPLIER SHIELD RUSH OTHER }
@@ -11,54 +17,60 @@ enum SubStatus { INACTIVE ACTIVE PAST_DUE CANCELED }
 enum Plan { FREE AGENCY_PRO }
 
 model users {
-  id         String  @id @default(uuid()) @db.Uuid
-  email      String  @unique
-  handle     String?
-  role       Role
-  tiktok_id  String? @unique
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @updatedAt @db.Timestamptz(6)
-  creators   creators?
-  agencies   agencies?
-  viewers    viewers?
-  subscriptions subscriptions[]
-  notifications notifications[]
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  handle       String?
+  role         Role
+  tiktok_id    String?  @unique
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt @db.Timestamptz(6)
+  creators     creators?
+  agencies     agencies?
+  viewers      viewers?
+  subscriptions  subscriptions[]
+  notifications  notifications[]
 }
+
 model creators {
-  id                 String  @id @default(uuid()) @db.Uuid
-  user_id            String  @unique @db.Uuid
-  user               users   @relation(fields: [user_id], references: [id])
+  id                 String   @id @default(uuid()) @db.Uuid
+  user_id            String   @unique @db.Uuid
+  user               users    @relation(fields: [user_id], references: [id])
   display_name       String
-  backstage_verified Boolean @default(false)
+  backstage_verified Boolean  @default(false)
   battles            battles[]
   boosters           boosters[]
   memberships        agency_memberships[]
 }
+
 model agencies {
-  id                 String  @id @default(uuid()) @db.Uuid
-  user_id            String  @unique @db.Uuid
-  user               users   @relation(fields: [user_id], references: [id])
+  id                 String   @id @default(uuid()) @db.Uuid
+  user_id            String   @unique @db.Uuid
+  user               users    @relation(fields: [user_id], references: [id])
   name               String
   backstage_org_id   String
-  backstage_verified Boolean @default(false)
+  backstage_verified Boolean  @default(false)
   memberships        agency_memberships[]
 }
+
 model agency_memberships {
-  id         String   @id @default(uuid()) @db.Uuid
-  agency_id  String   @db.Uuid
-  creator_id String   @db.Uuid
-  active     Boolean  @default(true)
-  agency     agencies @relation(fields: [agency_id], references: [id])
-  creator    creators @relation(fields: [creator_id], references: [id])
+  id         String    @id @default(uuid()) @db.Uuid
+  agency_id  String    @db.Uuid
+  creator_id String    @db.Uuid
+  active     Boolean   @default(true)
+  agency     agencies  @relation(fields: [agency_id], references: [id])
+  creator    creators  @relation(fields: [creator_id], references: [id])
+
   @@unique([agency_id, creator_id])
 }
+
 model viewers {
-  id           String @id @default(uuid()) @db.Uuid
-  user_id      String @unique @db.Uuid
-  user         users  @relation(fields: [user_id], references: [id])
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @unique @db.Uuid
+  user         users    @relation(fields: [user_id], references: [id])
   display_name String
   boosters     boosters[]
 }
+
 model battles {
   id           String   @id @default(uuid()) @db.Uuid
   creator_id   String   @db.Uuid
@@ -67,6 +79,7 @@ model battles {
   title        String
   notes        String?
 }
+
 model boosters {
   id               String       @id @default(uuid()) @db.Uuid
   type             BoosterType
@@ -79,10 +92,12 @@ model boosters {
   holder           viewers      @relation(fields: [holder_viewer_id], references: [id])
   creator          creators     @relation(fields: [creator_id], references: [id])
   events           booster_events[]
+
   @@index([creator_id])
   @@index([holder_viewer_id])
   @@index([active, expiry_at])
 }
+
 model booster_events {
   id         String           @id @default(uuid()) @db.Uuid
   booster_id String           @db.Uuid
@@ -91,29 +106,33 @@ model booster_events {
   at         DateTime         @db.Timestamptz(6)
   meta       Json?
 }
+
 model notifications {
-  id         String              @id @default(uuid()) @db.Uuid
-  user_id    String              @db.Uuid
-  user       users               @relation(fields: [user_id], references: [id])
+  id         String               @id @default(uuid()) @db.Uuid
+  user_id    String               @db.Uuid
+  user       users                @relation(fields: [user_id], references: [id])
   channel    NotificationChannel
   kind       NotificationKind
   payload    Json
-  send_at    DateTime            @db.Timestamptz(6)
-  sent_at    DateTime?           @db.Timestamptz(6)
+  send_at    DateTime             @db.Timestamptz(6)
+  sent_at    DateTime?            @db.Timestamptz(6)
   status     NotificationStatus
   error      String?
 }
+
 model jobs {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String    @id @default(uuid()) @db.Uuid
   type       String
-  run_at     DateTime @db.Timestamptz(6)
+  run_at     DateTime  @db.Timestamptz(6)
   payload    Json
-  attempts   Int      @default(0)
+  attempts   Int       @default(0)
   last_error String?
   locked_at  DateTime? @db.Timestamptz(6)
-  done       Boolean  @default(false)
+  done       Boolean   @default(false)
+
   @@index([run_at, done])
 }
+
 model webhooks {
   id          String   @id @default(uuid()) @db.Uuid
   provider    String
@@ -121,17 +140,20 @@ model webhooks {
   received_at DateTime @db.Timestamptz(6)
   payload     Json
 }
+
 model subscriptions {
-  id                  String   @id @default(uuid()) @db.Uuid
-  user_id             String   @db.Uuid
-  user                users    @relation(fields: [user_id], references: [id])
-  stripe_customer_id  String
-  stripe_sub_id       String?
-  status              SubStatus
-  plan                Plan
-  current_period_end  DateTime?
+  id                 String   @id @default(uuid()) @db.Uuid
+  user_id            String   @db.Uuid
+  user               users    @relation(fields: [user_id], references: [id])
+  stripe_customer_id String
+  stripe_sub_id      String?
+  status             SubStatus
+  plan               Plan
+  current_period_end DateTime?
+
   @@index([user_id])
 }
+
 model calendar_tokens {
   id            String   @id @default(uuid()) @db.Uuid
   owner_user_id String   @db.Uuid
