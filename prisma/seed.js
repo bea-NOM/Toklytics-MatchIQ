@@ -1,11 +1,13 @@
-// prisma/seed.ts
-import { PrismaClient } from '@prisma/client'
-import { randomUUID } from 'crypto'
-const prisma = new PrismaClient()
+// prisma/seed.js (CommonJS)
+const { PrismaClient } = require('@prisma/client');
+const { randomUUID } = require('crypto');
+
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding Toklytics – Battles...')
+  console.log('🌱 Seeding Toklytics – Battles...');
 
+  // USERS
   const admin = await prisma.users.upsert({
     where: { email: 'admin@toklytics.net' },
     update: {},
@@ -15,7 +17,7 @@ async function main() {
       handle: 'beaAdmin',
       role: 'ADMIN',
     },
-  })
+  });
 
   const creatorUser = await prisma.users.upsert({
     where: { email: 'creator1@example.com' },
@@ -26,7 +28,7 @@ async function main() {
       handle: 'creator1',
       role: 'CREATOR',
     },
-  })
+  });
 
   const viewerUser = await prisma.users.upsert({
     where: { email: 'viewer1@example.com' },
@@ -37,8 +39,9 @@ async function main() {
       handle: 'viewer1',
       role: 'VIEWER',
     },
-  })
+  });
 
+  // CREATOR / VIEWER profiles
   const creator = await prisma.creators.upsert({
     where: { user_id: creatorUser.id },
     update: {},
@@ -48,7 +51,7 @@ async function main() {
       display_name: 'Creator One',
       backstage_verified: true,
     },
-  })
+  });
 
   const viewer = await prisma.viewers.upsert({
     where: { user_id: viewerUser.id },
@@ -58,8 +61,9 @@ async function main() {
       user_id: viewerUser.id,
       display_name: 'Viewer One',
     },
-  })
+  });
 
+  // BATTLE
   const battle = await prisma.battles.create({
     data: {
       id: randomUUID(),
@@ -68,8 +72,9 @@ async function main() {
       title: 'Test Battle',
       notes: 'Seeded battle for demo',
     },
-  })
+  });
 
+  // BOOSTER + EVENT
   const booster = await prisma.boosters.create({
     data: {
       id: randomUUID(),
@@ -81,7 +86,7 @@ async function main() {
       source: 'match_win',
       active: true,
     },
-  })
+  });
 
   await prisma.booster_events.create({
     data: {
@@ -91,9 +96,16 @@ async function main() {
       at: new Date(),
       meta: { note: 'seed' },
     },
-  })
+  });
 
-  console.log('✅ Seed done.')
+  console.log('✅ Seed done.');
 }
 
-main().finally(() => prisma.$disconnect())
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
