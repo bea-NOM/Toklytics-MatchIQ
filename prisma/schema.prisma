@@ -27,6 +27,7 @@ enum BoosterType {
   GLOVE
   HAMMER
   TIME_MAKER
+  BOLT
 }
 
 enum BoosterEventKind {
@@ -235,4 +236,20 @@ model calendar_tokens {
   owner         users    @relation(fields: [owner_user_id], references: [id])
   token         String   @unique
   created_at    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model powerup_events {
+  id         String   @id @default(uuid()) @db.Uuid
+  match_id   String   @db.Uuid
+  creator_id String   @db.Uuid
+  type       BoosterType
+  used       Boolean  @default(false)
+  held       Boolean  @default(true)
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([match_id])
+  @@index([creator_id])
+  @@index([expires_at])
+  @@map("powerup_events")
 }
