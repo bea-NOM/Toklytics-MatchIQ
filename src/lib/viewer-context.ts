@@ -1,24 +1,26 @@
 import { headers as nextHeaders } from 'next/headers'
-import { Role } from '@prisma/client'
 import { prisma } from './prisma'
+import { Role as RoleEnum } from '@prisma/client'
+
+type Role = (typeof RoleEnum)[keyof typeof RoleEnum]
 
 type HeaderLike = Headers | ReturnType<typeof nextHeaders>
 
 export type ViewerContext =
   | {
-      role: Role.CREATOR
+      role: typeof RoleEnum.CREATOR
       userId: string
       creatorId: string
       accessibleCreatorIds: string[]
     }
   | {
-      role: Role.AGENCY
+      role: typeof RoleEnum.AGENCY
       userId: string
       agencyId: string
       accessibleCreatorIds: string[]
     }
   | {
-      role: Role.ADMIN
+      role: typeof RoleEnum.ADMIN
       userId: string
       accessibleCreatorIds?: undefined
     }
@@ -44,7 +46,7 @@ async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; rol
       include: { user: true },
     })
     if (creator?.user) {
-      return { userId: creator.user.id, roleHint: Role.CREATOR }
+      return { userId: creator.user.id, roleHint: RoleEnum.CREATOR }
     }
   }
 
@@ -55,7 +57,7 @@ async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; rol
       include: { user: true },
     })
     if (agency?.user) {
-      return { userId: agency.user.id, roleHint: Role.AGENCY }
+      return { userId: agency.user.id, roleHint: RoleEnum.AGENCY }
     }
   }
 
@@ -63,7 +65,7 @@ async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; rol
     include: { user: true },
   })
   if (creator?.user) {
-    return { userId: creator.user.id, roleHint: Role.CREATOR }
+    return { userId: creator.user.id, roleHint: RoleEnum.CREATOR }
   }
 
   return null
@@ -91,28 +93,28 @@ export async function getViewerContext(source?: HeaderLike): Promise<ViewerConte
   if (!user) return null
   const role = resolved.roleHint ?? user.role
 
-  if (role === Role.CREATOR && user.creators) {
+  if (role === RoleEnum.CREATOR && user.creators) {
     return {
-      role: Role.CREATOR,
+      role: RoleEnum.CREATOR,
       userId: user.id,
       creatorId: user.creators.id,
       accessibleCreatorIds: [user.creators.id],
     }
   }
 
-  if (role === Role.AGENCY && user.agencies) {
+  if (role === RoleEnum.AGENCY && user.agencies) {
     const creatorIds = user.agencies.memberships.map(m => m.creator_id)
     return {
-      role: Role.AGENCY,
+      role: RoleEnum.AGENCY,
       userId: user.id,
       agencyId: user.agencies.id,
       accessibleCreatorIds: creatorIds,
     }
   }
 
-  if (role === Role.ADMIN) {
+  if (role === RoleEnum.ADMIN) {
     return {
-      role: Role.ADMIN,
+      role: RoleEnum.ADMIN,
       userId: user.id,
     }
   }

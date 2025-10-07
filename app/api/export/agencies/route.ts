@@ -24,8 +24,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const agencyWhere = 'agencyId' in context ? { id: context.agencyId } : undefined
+
   const agencies = await prisma.agencies.findMany({
-    where: context.role === Role.AGENCY ? { id: context.agencyId } : undefined,
+    where: agencyWhere,
     include: {
       memberships: {
         where: { active: true },

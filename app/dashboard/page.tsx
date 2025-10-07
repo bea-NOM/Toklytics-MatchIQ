@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 import { prisma } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
-import { Role } from '@prisma/client';
+import { Role, Prisma } from '@prisma/client';
 import { headers } from 'next/headers';
 
 function rel(target: Date) {
@@ -12,6 +12,29 @@ function rel(target: Date) {
   const hrs = Math.round(mins / 60);
   return diff >= 0 ? `in ${hrs} hr` : `${hrs} hr ago`;
 }
+
+const agencyWithMembershipArgs = Prisma.validator<Prisma.agenciesDefaultArgs>()({
+  include: {
+    memberships: {
+      where: { active: true },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            display_name: true,
+            powerups: {
+              where: { active: true },
+              orderBy: { expiry_at: 'asc' },
+              select: { id: true, type: true, expiry_at: true },
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+type AgencyWithMemberships = Prisma.agenciesGetPayload<typeof agencyWithMembershipArgs>;
 
 export default async function Dashboard() {
   const context = await getViewerContext();
@@ -69,52 +92,20 @@ export default async function Dashboard() {
   const viewerById = new Map(viewers.map(v => [v.id, v]));
   const creatorById2 = new Map(creators2.map(c => [c.id, c]));
 
-  const agencies =
-    context.role === Role.AGENCY
-      ? await prisma.agencies.findMany({
-          where: { id: context.agencyId },
-          include: {
-            memberships: {
-              where: { active: true },
-              include: {
-                creator: {
-                  select: {
-                    id: true,
-                    display_name: true,
-                    powerups: {
-                      where: { active: true },
-                      orderBy: { expiry_at: 'asc' },
-                      select: { id: true, type: true, expiry_at: true },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        })
-      : context.role === Role.ADMIN
-        ? await prisma.agencies.findMany({
-            take: 10,
-            include: {
-              memberships: {
-                where: { active: true },
-                include: {
-                  creator: {
-                    select: {
-                      id: true,
-                      display_name: true,
-                      powerups: {
-                        where: { active: true },
-                        orderBy: { expiry_at: 'asc' },
-                        select: { id: true, type: true, expiry_at: true },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          })
-        : [];
+  let agencies: AgencyWithMemberships[];
+  if (context.role === Role.AGENCY && 'agencyId' in context) {
+    agencies = await prisma.agencies.findMany({
+      ...agencyWithMembershipArgs,
+      where: { id: context.agencyId },
+    });
+  } else if (context.role === Role.ADMIN) {
+    agencies = await prisma.agencies.findMany({
+      ...agencyWithMembershipArgs,
+      take: 10,
+    });
+  } else {
+    agencies = [];
+  }
 
   // Planner insights
   const now = Date.now();
