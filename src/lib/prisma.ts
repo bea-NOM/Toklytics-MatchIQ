@@ -1,15 +1,27 @@
-import { PrismaClient } from '@prisma/client';
+// src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
+import { withOptimize } from '@prisma/extension-optimize'
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+// Create a typed handle for globalThis without augmenting the global type
+const globalForPrisma = globalThis as unknown as {
+  __PRISMA__?: PrismaClient
 }
-const globalForPrisma = globalThis as typeof globalThis & { prisma?: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    // log: ['error', 'warn'], // enable if you want
-  });
+const basePrisma = new PrismaClient({
+  datasources: {
+    db: { url: process.env.DATABASE_URL },
+  },
+})
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+const optimizeApiKey = process.env.OPTIMIZE_API_KEY
+
+const client = optimizeApiKey
+  ? basePrisma.$extends(withOptimize({ apiKey: optimizeApiKey }))
+  : basePrisma
+
+export const prisma = (globalForPrisma.__PRISMA__ ?? client) as PrismaClient
+
+// Cache the client in dev/hot-reload
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.__PRISMA__ = prisma
+}

@@ -1,111 +1,162 @@
 // prisma/seed.js (CommonJS)
-const { PrismaClient } = require('@prisma/client');
-const { randomUUID } = require('crypto');
+const { PrismaClient, Role, PowerUpType, PowerUpEventKind, Prisma } = require('@prisma/client')
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
+
+const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60_000)
 
 async function main() {
-  console.log('🌱 Seeding Toklytics – Battles...');
+  console.log('🌱 Seeding Toklytics Battles data...')
 
-  // USERS
+  await prisma.powerup_events.deleteMany({ where: { powerup: { source: 'seed-script' } } })
+  await prisma.powerups.deleteMany({ where: { source: 'seed-script' } })
+  await prisma.battles.deleteMany({ where: { notes: 'Seeded battle for demo' } })
+  await prisma.powerupEvent.deleteMany({ where: { matchId: { in: ['demo-match-1', 'demo-match-2'] } } })
+
   const admin = await prisma.users.upsert({
     where: { email: 'admin@toklytics.net' },
-    update: {},
-    create: {
-      id: randomUUID(),
-      email: 'admin@toklytics.net',
-      handle: 'beaAdmin',
-      role: 'ADMIN',
-    },
-  });
+    update: { handle: 'beaAdmin', role: Role.ADMIN },
+    create: { email: 'admin@toklytics.net', handle: 'beaAdmin', role: Role.ADMIN },
+  })
 
   const creatorUser = await prisma.users.upsert({
     where: { email: 'creator1@example.com' },
-    update: {},
-    create: {
-      id: randomUUID(),
-      email: 'creator1@example.com',
-      handle: 'creator1',
-      role: 'CREATOR',
-    },
-  });
+    update: { handle: 'creator1', role: Role.CREATOR },
+    create: { email: 'creator1@example.com', handle: 'creator1', role: Role.CREATOR },
+  })
 
-  const viewerUser = await prisma.users.upsert({
+  const viewerUserA = await prisma.users.upsert({
     where: { email: 'viewer1@example.com' },
-    update: {},
-    create: {
-      id: randomUUID(),
-      email: 'viewer1@example.com',
-      handle: 'viewer1',
-      role: 'VIEWER',
-    },
-  });
+    update: { handle: 'viewer1', role: Role.VIEWER },
+    create: { email: 'viewer1@example.com', handle: 'viewer1', role: Role.VIEWER },
+  })
 
-  // CREATOR / VIEWER profiles
+  const viewerUserB = await prisma.users.upsert({
+    where: { email: 'viewer2@example.com' },
+    update: { handle: 'viewer2', role: Role.VIEWER },
+    create: { email: 'viewer2@example.com', handle: 'viewer2', role: Role.VIEWER },
+  })
+
   const creator = await prisma.creators.upsert({
     where: { user_id: creatorUser.id },
-    update: {},
-    create: {
-      id: randomUUID(),
-      user_id: creatorUser.id,
-      display_name: 'Creator One',
-      backstage_verified: true,
-    },
-  });
+    update: { display_name: 'Creator One', backstage_verified: true },
+    create: { user_id: creatorUser.id, display_name: 'Creator One', backstage_verified: true },
+  })
 
-  const viewer = await prisma.viewers.upsert({
-    where: { user_id: viewerUser.id },
-    update: {},
-    create: {
-      id: randomUUID(),
-      user_id: viewerUser.id,
-      display_name: 'Viewer One',
-    },
-  });
+  const viewerA = await prisma.viewers.upsert({
+    where: { user_id: viewerUserA.id },
+    update: { display_name: 'Viewer One' },
+    create: { user_id: viewerUserA.id, display_name: 'Viewer One' },
+  })
 
-  // BATTLE
+  const viewerB = await prisma.viewers.upsert({
+    where: { user_id: viewerUserB.id },
+    update: { display_name: 'Viewer Two' },
+    create: { user_id: viewerUserB.id, display_name: 'Viewer Two' },
+  })
+
+  const now = new Date()
+
   const battle = await prisma.battles.create({
     data: {
-      id: randomUUID(),
       creator_id: creator.id,
-      scheduled_at: new Date(Date.now() + 60 * 60 * 1000), // +1h
-      title: 'Test Battle',
+      scheduled_at: addMinutes(now, 90),
+      title: 'Creator One vs Community',
       notes: 'Seeded battle for demo',
     },
-  });
+  })
 
-  // BOOSTER + EVENT
-  const booster = await prisma.boosters.create({
-    data: {
-      id: randomUUID(),
-      type: 'MULTIPLIER',
-      holder_viewer_id: viewer.id,
-      creator_id: creator.id,
-      awarded_at: new Date(),
-      expiry_at: new Date(Date.now() + 30 * 60 * 1000), // +30m
-      source: 'match_win',
-      active: true,
-    },
-  });
+  const [glove, timeMaker] = await Promise.all([
+    prisma.powerups.create({
+      data: {
+        type: PowerUpType.GLOVE,
+        holder_viewer_id: viewerA.id,
+        creator_id: creator.id,
+        awarded_at: addMinutes(now, -25),
+        expiry_at: addMinutes(now, 35),
+        source: 'seed-script',
+        active: true,
+      },
+    }),
+    prisma.powerups.create({
+      data: {
+        type: PowerUpType.TIME_MAKER,
+        holder_viewer_id: viewerB.id,
+        creator_id: creator.id,
+        awarded_at: addMinutes(now, -10),
+        expiry_at: addMinutes(now, 20),
+        source: 'seed-script',
+        active: true,
+      },
+    }),
+  ])
 
-  await prisma.booster_events.create({
-    data: {
-      id: randomUUID(),
-      booster_id: booster.id,
-      kind: 'CREATED',
-      at: new Date(),
-      meta: { note: 'seed' },
-    },
-  });
+  await prisma.powerup_events.createMany({
+    data: [
+      {
+        powerup_id: glove.id,
+        kind: PowerUpEventKind.CREATED,
+        at: addMinutes(now, -25),
+        meta: { reason: 'awarded for top supporter' },
+      },
+      {
+        powerup_id: glove.id,
+        kind: PowerUpEventKind.ACTIVATED,
+        at: addMinutes(now, -5),
+        meta: { trigger: 'viewer_manual' },
+      },
+      {
+        powerup_id: timeMaker.id,
+        kind: PowerUpEventKind.CREATED,
+        at: addMinutes(now, -10),
+        meta: { reason: 'daily reward' },
+      },
+    ].map((event) => ({ ...event, meta: event.meta ?? Prisma.DbNull })),
+  })
 
-  console.log('✅ Seed done.');
+  await prisma.powerupEvent.createMany({
+    data: [
+      {
+        matchId: 'demo-match-1',
+        creatorId: creator.id,
+        contributorId: viewerA.id,
+        type: 'glove',
+        action: 'used',
+        ts: addMinutes(now, -3),
+        expiresAt: addMinutes(now, 12),
+      },
+      {
+        matchId: 'demo-match-1',
+        creatorId: creator.id,
+        contributorId: viewerB.id,
+        type: 'time_maker',
+        action: 'held',
+        ts: addMinutes(now, -2),
+        expiresAt: addMinutes(now, 18),
+      },
+      {
+        matchId: 'demo-match-2',
+        creatorId: creator.id,
+        contributorId: admin.id,
+        type: 'magic_mist',
+        action: 'held',
+        ts: addMinutes(now, -1),
+        expiresAt: addMinutes(now, 25),
+      },
+    ],
+  })
+
+  console.log('✅ Seed completed')
+  console.log(`   Battle created: ${battle.title}`)
+  console.log(`   Power-ups active: ${[glove.type, timeMaker.type].join(', ')}`)
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect()
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch(async (e) => {
+    console.error('❌ Seed failed:', e)
+    await prisma.$disconnect()
+    process.exit(1)
+  })

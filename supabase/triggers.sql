@@ -1,4 +1,4 @@
-create or replace function set_booster_expiry()
+create or replace function set_powerup_expiry()
 returns trigger language plpgsql as $$
 begin
   if new.expiry_at is null then
@@ -7,12 +7,12 @@ begin
   return new;
 end;$$;
 
-drop trigger if exists trg_booster_expiry on boosters;
-create trigger trg_booster_expiry before insert on boosters
-for each row execute procedure set_booster_expiry();
+drop trigger if exists trg_powerup_expiry on powerups;
+create trigger trg_powerup_expiry before insert on powerups
+for each row execute procedure set_powerup_expiry();
 
-create index if not exists idx_boosters_active_future
-  on boosters (expiry_at)
+create index if not exists idx_powerups_active_future
+  on powerups (expiry_at)
   where active = true and expiry_at > now();
 
 alter table viewers add constraint viewers_user_unique unique (user_id);

@@ -5,16 +5,18 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "public"."Role" AS ENUM ('VIEWER', 'CREATOR', 'AGENCY', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "public"."BoosterType" AS ENUM ('MULTIPLIER', 'MIST', 'GLOVE', 'HAMMER');
+CREATE TYPE "public"."PowerUpType" AS ENUM ('VAULT_GLOVE', 'MIST', 'GLOVE', 'STUN_HAMMER', 'TIME_MAKER', 'No.2_powerup
+', 'No.3_powerup
+');
 
 -- CreateEnum
-CREATE TYPE "public"."BoosterEventKind" AS ENUM ('CREATED', 'ACTIVATED', 'EXPIRED', 'REVOKED');
+CREATE TYPE "public"."POWERUPEventKind" AS ENUM ('CREATED', 'ACTIVATED', 'EXPIRED', 'REVOKED');
 
 -- CreateEnum
 CREATE TYPE "public"."NotificationChannel" AS ENUM ('EMAIL', 'IN_APP');
 
 -- CreateEnum
-CREATE TYPE "public"."NotificationKind" AS ENUM ('BOOSTER_EXPIRING', 'BATTLE_REMINDER');
+CREATE TYPE "public"."NotificationKind" AS ENUM ('POWERUP_EXPIRING', 'BATTLE_REMINDER');
 
 -- CreateEnum
 CREATE TYPE "public"."NotificationStatus" AS ENUM ('PENDING', 'SENT', 'FAILED');
@@ -90,9 +92,9 @@ CREATE TABLE "public"."battles" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."boosters" (
+CREATE TABLE "public"."power-ups" (
     "id" UUID NOT NULL,
-    "type" "public"."BoosterType" NOT NULL,
+    "type" "public"."PowerUpType" NOT NULL,
     "holder_viewer_id" UUID NOT NULL,
     "creator_id" UUID NOT NULL,
     "awarded_at" TIMESTAMPTZ(6) NOT NULL,
@@ -100,18 +102,19 @@ CREATE TABLE "public"."boosters" (
     "source" TEXT NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
 
-    CONSTRAINT "boosters_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "powerups_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."booster_events" (
+CREATE TABLE "public"."powerup_events" (
     "id" UUID NOT NULL,
-    "booster_id" UUID NOT NULL,
-    "kind" "public"."BoosterEventKind" NOT NULL,
+    "powerup
+    _id" UUID NOT NULL,
+    "kind" "public"."PowerUpEventKind" NOT NULL,
     "at" TIMESTAMPTZ(6) NOT NULL,
     "meta" JSONB,
 
-    CONSTRAINT "booster_events_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "powerup_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -198,13 +201,13 @@ CREATE UNIQUE INDEX "agency_memberships_agency_id_creator_id_key" ON "public"."a
 CREATE UNIQUE INDEX "viewers_user_id_key" ON "public"."viewers"("user_id");
 
 -- CreateIndex
-CREATE INDEX "boosters_creator_id_idx" ON "public"."boosters"("creator_id");
+CREATE INDEX "powerups_creator_id_idx" ON "public"."powerups"("creator_id");
 
 -- CreateIndex
-CREATE INDEX "boosters_holder_viewer_id_idx" ON "public"."boosters"("holder_viewer_id");
+CREATE INDEX "powerups_holder_viewer_id_idx" ON "public"."powerups"("holder_viewer_id");
 
 -- CreateIndex
-CREATE INDEX "boosters_active_expiry_at_idx" ON "public"."boosters"("active", "expiry_at");
+CREATE INDEX "powerups_active_expiry_at_idx" ON "public"."powerups"("active", "expiry_at");
 
 -- CreateIndex
 CREATE INDEX "jobs_run_at_done_idx" ON "public"."jobs"("run_at", "done");
@@ -237,13 +240,17 @@ ALTER TABLE "public"."viewers" ADD CONSTRAINT "viewers_user_id_fkey" FOREIGN KEY
 ALTER TABLE "public"."battles" ADD CONSTRAINT "battles_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."creators"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."boosters" ADD CONSTRAINT "boosters_holder_viewer_id_fkey" FOREIGN KEY ("holder_viewer_id") REFERENCES "public"."viewers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."powerups" ADD CONSTRAINT "powerups_holder_viewer_id_fkey" FOREIGN KEY ("holder_viewer_id") REFERENCES "public"."viewers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."boosters" ADD CONSTRAINT "boosters_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."creators"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."powerups" ADD CONSTRAINT "powerups_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."creators"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."booster_events" ADD CONSTRAINT "booster_events_booster_id_fkey" FOREIGN KEY ("booster_id") REFERENCES "public"."boosters"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."powerup
+_events" ADD CONSTRAINT "powerup
+_events_powerup
+_id_fkey" FOREIGN KEY ("powerup
+_id") REFERENCES "public"."powerups"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -257,3 +264,30 @@ ALTER TABLE "public"."subscriptions" ADD CONSTRAINT "subscriptions_agency_id_fke
 -- AddForeignKey
 ALTER TABLE "public"."calendar_tokens" ADD CONSTRAINT "calendar_tokens_owner_user_id_fkey" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+-- Ensure TIME_MAKER exists in powerup
+Type enum
+DO $$ BEGIN
+  ALTER TYPE "public"."powerup
+  Type" ADD VALUE IF NOT EXISTS 'TIME_MAKER';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Create PowerupEvent table for Toklytics – Battles
+CREATE TABLE IF NOT EXISTS "public"."PowerupEvent" (
+  "id"            TEXT        NOT NULL,
+  "matchId"       TEXT        NOT NULL,
+  "creatorId"     TEXT        NOT NULL,
+  "contributorId" TEXT        NOT NULL,
+  "type"          TEXT        NOT NULL,  -- glove | time_maker | shield | snipe
+  "action"        TEXT        NOT NULL,  -- used | held
+  "ts"            TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "expiresAt"     TIMESTAMPTZ,
+  CONSTRAINT "PowerupEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- Helpful indexes used by the UI/API
+CREATE INDEX IF NOT EXISTS "PowerupEvent_match_creator_idx" ON "public"."PowerupEvent" ("matchId","creatorId");
+CREATE INDEX IF NOT EXISTS "PowerupEvent_contributor_idx"   ON "public"."PowerupEvent" ("contributorId");
+CREATE INDEX IF NOT EXISTS "PowerupEvent_type_action_idx"   ON "public"."PowerupEvent" ("type","action");
+CREATE INDEX IF NOT EXISTS "PowerupEvent_expires_idx"       ON "public"."PowerupEvent" ("expiresAt");
