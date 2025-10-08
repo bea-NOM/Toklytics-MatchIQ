@@ -4,8 +4,8 @@ alter table agencies enable row level security;
 alter table agency_memberships enable row level security;
 alter table viewers enable row level security;
 alter table battles enable row level security;
-alter table boosters enable row level security;
-alter table booster_events enable row level security;
+alter table powerups enable row level security;
+alter table powerup_events enable row level security;
 alter table notifications enable row level security;
 alter table jobs enable row level security;
 alter table webhooks enable row level security;
@@ -36,15 +36,15 @@ create policy battles_creator on battles for select using (creator_id = auth_cre
 create policy battles_agency_roster on battles for select using (exists (select 1 from agency_memberships m where m.creator_id = battles.creator_id and m.agency_id = auth_agency_id() and m.active));
 create policy battles_admin on battles for all using (exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')) with check (true);
 
-create policy boosters_creator on boosters for select using (creator_id = auth_creator_id());
-create policy boosters_agency_roster on boosters for select using (exists (select 1 from agency_memberships m where m.creator_id = boosters.creator_id and m.agency_id = auth_agency_id() and m.active));
-create policy boosters_viewer on boosters for select using (holder_viewer_id = auth_viewer_id());
+create policy powerups_creator on powerups for select using (creator_id = auth_creator_id());
+create policy powerups_agency_roster on powerups for select using (exists (select 1 from agency_memberships m where m.creator_id = powerups.creator_id and m.agency_id = auth_agency_id() and m.active));
+create policy powerups_viewer on powerups for select using (holder_viewer_id = auth_viewer_id());
 
-create policy booster_events_visible on booster_events for select using (
-  exists (select 1 from boosters b where b.id = booster_events.booster_id and (
-    b.creator_id = auth_creator_id() or
-    b.holder_viewer_id = auth_viewer_id() or
-    exists (select 1 from agency_memberships m where m.creator_id = b.creator_id and m.agency_id = auth_agency_id() and m.active)
+create policy powerup_events_visible on powerup_events for select using (
+  exists (select 1 from powerups p where p.id = powerup_events.powerup_id and (
+    p.creator_id = auth_creator_id() or
+    p.holder_viewer_id = auth_viewer_id() or
+    exists (select 1 from agency_memberships m where m.creator_id = p.creator_id and m.agency_id = auth_agency_id() and m.active)
   ))
 );
 

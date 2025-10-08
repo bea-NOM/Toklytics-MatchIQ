@@ -1,5 +1,8 @@
 .env
 node_modules
 .next
+.dist
+.dist/
+/dist
 .vercel
 .DS_Store
