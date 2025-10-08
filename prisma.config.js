@@ -1,5 +1,12 @@
 // prisma.config.js
-require('dotenv/config')
+try {
+  require('dotenv/config')
+} catch (error) {
+  if (error.code !== 'MODULE_NOT_FOUND') {
+    throw error
+  }
+  // The Prisma language server runs without our dev deps, so skip dotenv silently.
+}
 const { defineConfig } = require('@prisma/config')
 
 module.exports = defineConfig({
