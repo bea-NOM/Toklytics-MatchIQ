@@ -1,4 +1,6 @@
-import { prisma } from '../src/lib/prisma';
+import { getPrismaClient } from '../src/lib/prisma';
+
+const prisma = getPrismaClient();
 
 (async () => {
   try {

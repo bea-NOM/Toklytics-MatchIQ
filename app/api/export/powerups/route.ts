@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
-import { prisma } from '@/src/lib/prisma'
+import { Role, type PrismaClient } from '@prisma/client'
+import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma'
 import { getViewerContext } from '@/src/lib/viewer-context'
 
 const LABELS: Record<string, string> = {
@@ -27,6 +27,16 @@ export async function GET(req: Request) {
   const context = await getViewerContext(req.headers)
   if (!context) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  let prisma: PrismaClient
+  try {
+    prisma = getPrismaClient()
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return NextResponse.json({ error: 'Database connection not configured' }, { status: 503 })
+    }
+    throw error
   }
 
   const creatorFilter = context.role === Role.ADMIN ? undefined : context.accessibleCreatorIds

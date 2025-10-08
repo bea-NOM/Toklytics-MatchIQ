@@ -1,27 +1,39 @@
 // src/lib/prisma.ts
 import { PrismaClient } from '@prisma/client'
-import { withOptimize } from '@prisma/extension-optimize'
 
-// Create a typed handle for globalThis without augmenting the global type
-const globalForPrisma = globalThis as unknown as {
+export class MissingDatabaseUrlError extends Error {
+  constructor() {
+    super('DATABASE_URL environment variable is required to use Prisma.')
+  }
+}
+
+type PrismaCache = {
   __PRISMA__?: PrismaClient
 }
 
-const basePrisma = new PrismaClient({
-  datasources: {
-    db: { url: process.env.DATABASE_URL },
-  },
-})
+const globalForPrisma = globalThis as typeof globalThis & PrismaCache
 
-const optimizeApiKey = process.env.OPTIMIZE_API_KEY
+function createPrismaClient(): PrismaClient {
+  const databaseUrl = process.env.DATABASE_URL
 
-const client = optimizeApiKey
-  ? basePrisma.$extends(withOptimize({ apiKey: optimizeApiKey }))
-  : basePrisma
+  if (!databaseUrl) {
+    throw new MissingDatabaseUrlError()
+  }
 
-export const prisma = (globalForPrisma.__PRISMA__ ?? client) as PrismaClient
+  const baseClient = new PrismaClient({
+    datasources: {
+      db: { url: databaseUrl },
+    },
+  })
 
-// Cache the client in dev/hot-reload
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.__PRISMA__ = prisma
+  return baseClient
 }
+
+export function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.__PRISMA__) {
+    globalForPrisma.__PRISMA__ = createPrismaClient()
+  }
+  return globalForPrisma.__PRISMA__
+}
+
+export type { PrismaClient }

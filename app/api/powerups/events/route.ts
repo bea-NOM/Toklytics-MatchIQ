@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/src/lib/prisma'
+import { type PrismaClient } from '@prisma/client'
+import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma'
 
 const bodySchema = z.object({
   matchId: z.string().min(1),
@@ -42,6 +43,16 @@ export async function POST(req: Request) {
       { error: 'Invalid payload', details: err instanceof Error ? err.message : String(err) },
       { status: 400 },
     )
+  }
+
+  let prisma: PrismaClient
+  try {
+    prisma = getPrismaClient()
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return NextResponse.json({ error: 'Database connection not configured' }, { status: 503 })
+    }
+    throw error
   }
 
   const now = new Date()

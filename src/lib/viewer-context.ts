@@ -1,10 +1,21 @@
 import { headers as nextHeaders } from 'next/headers'
-import { prisma } from './prisma'
 import { Role as RoleEnum } from '@prisma/client'
+import { getPrismaClient, MissingDatabaseUrlError, type PrismaClient } from './prisma'
 
 type Role = (typeof RoleEnum)[keyof typeof RoleEnum]
 
 type HeaderLike = Headers | ReturnType<typeof nextHeaders>
+
+function prismaOrNull(): PrismaClient | null {
+  try {
+    return getPrismaClient()
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return null
+    }
+    throw error
+  }
+}
 
 export type ViewerContext =
   | {
@@ -37,6 +48,12 @@ async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; rol
   const fallbackUserId = process.env.DEMO_USER_ID
   if (fallbackUserId) {
     return { userId: fallbackUserId as string, roleHint: headerRole ?? undefined }
+  }
+
+  const prisma = prismaOrNull()
+
+  if (!prisma) {
+    return null
   }
 
   const demoCreatorId = process.env.DEMO_CREATOR_ID
@@ -74,6 +91,9 @@ async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; rol
 export async function getViewerContext(source?: HeaderLike): Promise<ViewerContext | null> {
   const resolved = await resolveUserId(source)
   if (!resolved) return null
+
+  const prisma = prismaOrNull()
+  if (!prisma) return null
 
   const user = await prisma.users.findUnique({
     where: { id: resolved.userId },
