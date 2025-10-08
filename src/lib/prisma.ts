@@ -1,6 +1,5 @@
 // src/lib/prisma.ts
 import { PrismaClient } from '@prisma/client'
-import { withOptimize } from '@prisma/extension-optimize'
 
 export class MissingDatabaseUrlError extends Error {
   constructor() {
@@ -27,11 +26,7 @@ function createPrismaClient(): PrismaClient {
     },
   })
 
-  const optimizeApiKey = process.env.OPTIMIZE_API_KEY
-
-  return optimizeApiKey
-    ? baseClient.$extends(withOptimize({ apiKey: optimizeApiKey }))
-    : baseClient
+  return baseClient
 }
 
 export function getPrismaClient(): PrismaClient {
