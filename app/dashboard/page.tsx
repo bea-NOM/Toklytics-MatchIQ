@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
-import { prisma } from '@/src/lib/prisma';
+import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
-import { Role, Prisma } from '@prisma/client';
+import { Role, Prisma, type PrismaClient } from '@prisma/client';
 import { headers } from 'next/headers';
 
 function rel(target: Date) {
@@ -37,6 +37,23 @@ const agencyWithMembershipArgs = Prisma.validator<Prisma.agenciesDefaultArgs>()(
 type AgencyWithMemberships = Prisma.agenciesGetPayload<typeof agencyWithMembershipArgs>;
 
 export default async function Dashboard() {
+  let prisma: PrismaClient;
+  try {
+    prisma = getPrismaClient();
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return (
+        <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – Battles</h1>
+          <p style={{ marginTop: 16, color: '#666' }}>
+            Database connection is not configured. Set the DATABASE_URL environment variable to view the dashboard.
+          </p>
+        </main>
+      );
+    }
+    throw error;
+  }
+
   const context = await getViewerContext();
   if (!context) {
     return (

@@ -1,5 +1,7 @@
 import { NotificationChannel, NotificationKind, NotificationStatus, PowerUpEventKind, Prisma } from '@prisma/client'
-import { prisma } from '../lib/prisma'
+import { getPrismaClient } from '../lib/prisma'
+
+const prisma = getPrismaClient()
 
 async function expirePowerups() {
   const now = new Date()

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
-import { prisma } from '@/src/lib/prisma'
+import { Role, type PrismaClient } from '@prisma/client'
+import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma'
 import { getViewerContext } from '@/src/lib/viewer-context'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -22,6 +22,16 @@ export async function GET(req: Request) {
 
   if (context.role === Role.CREATOR) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  let prisma: PrismaClient
+  try {
+    prisma = getPrismaClient()
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return NextResponse.json({ error: 'Database connection not configured' }, { status: 503 })
+    }
+    throw error
   }
 
   const agencyWhere = 'agencyId' in context ? { id: context.agencyId } : undefined

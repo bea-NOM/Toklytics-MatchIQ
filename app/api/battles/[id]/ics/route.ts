@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/src/lib/prisma' // or '../../../../../src/lib/prisma'
+import { type PrismaClient } from '@prisma/client'
+import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma' // or '../../../../../src/lib/prisma'
 
 function toICS(d: Date) {
   return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
 
 export async function GET(_req: Request, ctx: { params: { id: string } }) {
+  let prisma: PrismaClient
+  try {
+    prisma = getPrismaClient()
+  } catch (error) {
+    if (error instanceof MissingDatabaseUrlError) {
+      return new NextResponse('Database connection not configured', { status: 503 })
+    }
+    throw error
+  }
+
   const { id } = ctx.params
   const battle = await prisma.battles.findUnique({ where: { id } })
   if (!battle) return new NextResponse('Not found', { status: 404 })
