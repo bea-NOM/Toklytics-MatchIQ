@@ -2,7 +2,7 @@
 try {
   require('dotenv/config')
 } catch (error) {
-  if (error.code !== 'MODULE_NOT_FOUND') {
+  if (!error.message || !error.message.includes('dotenv')) {
     throw error
   }
   // The Prisma language server runs without our dev deps, so skip dotenv silently.
