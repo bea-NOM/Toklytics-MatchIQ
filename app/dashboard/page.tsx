@@ -1,8 +1,10 @@
 // app/dashboard/page.tsx
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
-import { Role, Prisma, type PrismaClient } from '@prisma/client';
+import { getSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
+import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
+import CountdownTimer from './countdown-timer';
 
 function rel(target: Date) {
   const diff = +target - Date.now();
@@ -12,6 +14,47 @@ function rel(target: Date) {
   const hrs = Math.round(mins / 60);
   return diff >= 0 ? `in ${hrs} hr` : `${hrs} hr ago`;
 }
+
+const TYPE_LABELS: Record<keyof typeof PowerUpType, string> = {
+  MAGIC_MIST: 'Magic Mist',
+  VAULT_GLOVE: 'Vault Glove',
+  NO2_BOOSTER: 'No. 2 Booster',
+  NO3_BOOSTER: 'No. 3 Booster',
+  STUN_HAMMER: 'Stun Hammer',
+  GLOVE: 'Boosting Glove',
+  TIME_MAKER: 'Time Maker',
+};
+
+const formatPowerUpType = (type: PowerUpType) =>
+  TYPE_LABELS[type as keyof typeof TYPE_LABELS] ?? type;
+
+type CapabilityHighlight = {
+  title: string;
+  description: string;
+  proOnly?: boolean;
+};
+
+const CAPABILITIES: CapabilityHighlight[] = [
+  {
+    title: 'Power-Up Tracking',
+    description: 'See exactly which supporters hold power-ups for each creator and when they expire.',
+  },
+  {
+    title: 'Expiration Alerts',
+    description: 'Never miss a power-up expiration with real-time countdown timers and notifications.',
+    proOnly: true,
+  },
+  {
+    title: 'Data Export',
+    description: 'Export filtered data to CSV/Excel for further analysis and record keeping.',
+    proOnly: true,
+  },
+  {
+    title: 'Advanced Filtering',
+    description: 'Filter power-ups by creator, expiration date, type, and supporter for precise insights.',
+    proOnly: true,
+  },
+];
 
 const agencyWithMembershipArgs = Prisma.validator<Prisma.agenciesDefaultArgs>()({
   include: {
@@ -36,7 +79,11 @@ const agencyWithMembershipArgs = Prisma.validator<Prisma.agenciesDefaultArgs>()(
 
 type AgencyWithMemberships = Prisma.agenciesGetPayload<typeof agencyWithMembershipArgs>;
 
-export default async function Dashboard() {
+type DashboardProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   let prisma: PrismaClient;
   try {
     prisma = getPrismaClient();
@@ -66,6 +113,10 @@ export default async function Dashboard() {
     );
   }
 
+  const plan = getSubscriptionPlan();
+  const planLabel = getPlanLabel(plan);
+  const proEnabled = hasProAccess(plan);
+
   // base host for webcal:// (Apple iCal)
   const h = headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
@@ -73,6 +124,44 @@ export default async function Dashboard() {
 
   const accessibleCreatorIds =
     context.role === Role.ADMIN ? undefined : context.accessibleCreatorIds;
+
+  const readSearchParam = (key: string) => {
+    const value = searchParams?.[key];
+    if (Array.isArray(value)) return value[0] ?? '';
+    return value ?? '';
+  };
+
+  const rawFilters = {
+    creator: readSearchParam('creator').trim(),
+    supporter: readSearchParam('supporter').trim(),
+    type: readSearchParam('type').trim(),
+    expiresAfter: readSearchParam('expiresAfter').trim(),
+    expiresBefore: readSearchParam('expiresBefore').trim(),
+  };
+
+  const parseDate = (value: string) => {
+    if (!value) return undefined;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  };
+
+  const normalizedTypeFilter = rawFilters.type ? rawFilters.type.toUpperCase() : '';
+
+  let creatorFilter: string | undefined;
+  let supporterFilter: string | undefined;
+  let typeFilter: string | undefined;
+  let expiresAfter: Date | undefined;
+  let expiresBefore: Date | undefined;
+
+  if (proEnabled) {
+    creatorFilter = rawFilters.creator || undefined;
+    supporterFilter = rawFilters.supporter || undefined;
+    typeFilter = normalizedTypeFilter || undefined;
+    expiresAfter = parseDate(rawFilters.expiresAfter);
+    expiresBefore = parseDate(rawFilters.expiresBefore);
+  }
+
+  const powerupTypeOptions = Object.keys(PowerUpType) as Array<keyof typeof PowerUpType>;
 
   // Upcoming battles
   const battles = await prisma.battles.findMany({
@@ -87,14 +176,62 @@ export default async function Dashboard() {
   const creatorById = new Map(creators.map(c => [c.id, c]));
 
   // Active power-ups (soonest to expire)
-  const powerupWhere = accessibleCreatorIds
-    ? { active: true, creator_id: { in: accessibleCreatorIds } }
-    : { active: true };
+  const powerupConditions: Prisma.powerupsWhereInput[] = [{ active: true }];
+
+  if (accessibleCreatorIds) {
+    powerupConditions.push({ creator_id: { in: accessibleCreatorIds } });
+  }
+
+  if (proEnabled) {
+    if (creatorFilter) {
+      powerupConditions.push({
+        OR: [
+          { creator_id: creatorFilter },
+          {
+            creator: {
+              display_name: { contains: creatorFilter, mode: 'insensitive' },
+            },
+          },
+        ],
+      });
+    }
+
+    if (supporterFilter) {
+      powerupConditions.push({
+        OR: [
+          { holder_viewer_id: supporterFilter },
+          {
+            holder: {
+              display_name: { contains: supporterFilter, mode: 'insensitive' },
+            },
+          },
+        ],
+      });
+    }
+
+    if (typeFilter && typeFilter in PowerUpType) {
+      powerupConditions.push({ type: typeFilter as PowerUpType });
+    }
+
+    if (expiresAfter || expiresBefore) {
+      powerupConditions.push({
+        expiry_at: {
+          ...(expiresAfter ? { gte: expiresAfter } : {}),
+          ...(expiresBefore ? { lte: expiresBefore } : {}),
+        },
+      });
+    }
+  }
+
+  const powerupWhere =
+    powerupConditions.length === 1
+      ? powerupConditions[0]
+      : { AND: powerupConditions };
 
   const powerups = await prisma.powerups.findMany({
     where: powerupWhere,
     orderBy: { expiry_at: 'asc' },
-    take: 20,
+    take: proEnabled ? 100 : 20,
   });
   const viewerIds = [...new Set(powerups.map(pu => pu.holder_viewer_id))];
   const puCreatorIds = [...new Set(powerups.map(pu => pu.creator_id))];
@@ -128,6 +265,13 @@ export default async function Dashboard() {
   const now = Date.now();
   const twentyFourHours = now + 24 * 60 * 60 * 1000;
   const seventyTwoHours = now + 72 * 60 * 60 * 1000;
+  const expiringSoon = proEnabled
+    ? powerups.filter(pu => {
+        const expiryMs =
+          pu.expiry_at instanceof Date ? pu.expiry_at.getTime() : new Date(pu.expiry_at).getTime();
+        return expiryMs >= now && expiryMs <= twentyFourHours;
+      })
+    : [];
 
   const plannerByCreator = new Map<
     string,
@@ -163,10 +307,99 @@ export default async function Dashboard() {
 
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-      <header>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – Battles</h1>
-        <p style={{ color: '#666' }}>Power-up visibility & battle planning</p>
+      <header style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span
+            style={{
+              fontSize: 13,
+              letterSpacing: 0.4,
+              textTransform: 'uppercase',
+              color: '#4a5a88',
+            }}
+          >
+            Toklytics — Battles
+          </span>
+          <h1 style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.2 }}>
+            Everything you need to win TikTok battles
+          </h1>
+          <p style={{ color: '#445065', fontSize: 15, maxWidth: 640 }}>
+            Comprehensive tools designed specifically for TikTok battle preparation. Stay organized, track power-ups, and never miss a match.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontSize: 12,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid #ddd',
+              color: '#0B1220',
+              background: '#f4f6fb',
+            }}
+          >
+            Plan: {planLabel}
+          </span>
+          {!proEnabled && (
+            <span style={{ fontSize: 13, color: '#0B5FFF' }}>
+              Upgrade to Pro for countdown alerts, exports, and advanced filtering.
+            </span>
+          )}
+        </div>
       </header>
+
+      <section style={{ marginTop: 24 }}>
+        <div
+          style={{
+            display: 'grid',
+            gap: 16,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          }}
+        >
+          {CAPABILITIES.map(capability => {
+            const locked = capability.proOnly && !proEnabled;
+            return (
+              <div
+                key={capability.title}
+                style={{
+                  border: '1px solid #e4e8f5',
+                  borderRadius: 14,
+                  padding: 16,
+                  background: locked ? '#f9f9fc' : '#f4f7ff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontWeight: 600, color: '#0B1220' }}>{capability.title}</span>
+                  {capability.proOnly && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.6,
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        border: '1px solid',
+                        borderColor: proEnabled ? '#bfd0ff' : '#d4d8e5',
+                        background: proEnabled ? '#e9f0ff' : '#f2f3f8',
+                        color: proEnabled ? '#0B5FFF' : '#6b7591',
+                      }}
+                    >
+                      Pro only
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 13, color: locked ? '#7f889f' : '#4a5a88', lineHeight: 1.5 }}>
+                  {capability.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Upcoming Battles */}
       <section style={{ marginTop: 24 }}>
@@ -242,7 +475,7 @@ export default async function Dashboard() {
               items.slice(0, 3).map(item => {
                 const viewer = viewerById.get(item.holder_viewer_id);
                 const label = viewer?.display_name ?? item.holder_viewer_id.slice(0, 6);
-                return `${item.type} • ${label}`;
+                return `${formatPowerUpType(item.type as PowerUpType)} • ${label}`;
               }).join(' · ');
 
             const recommendation = bucket.expiring24.length
@@ -279,24 +512,80 @@ export default async function Dashboard() {
         </div>
       </section>
 
+      {/* Expiration Alerts */}
+      <section style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600 }}>Expiration Alerts</h2>
+          <span
+            style={{
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: 0.6,
+              color: proEnabled ? '#0B5FFF' : '#999',
+            }}
+          >
+            {proEnabled ? 'Real-time countdowns' : 'Pro feature'}
+          </span>
+        </div>
+        <div style={{ border: '1px solid #eee', borderRadius: 16, padding: 16 }}>
+          {proEnabled ? (
+            expiringSoon.length === 0 ? (
+              <p style={{ color: '#666' }}>No power-ups expiring in the next 24 hours.</p>
+            ) : (
+              expiringSoon.map(pu => {
+                const holder = viewerById.get(pu.holder_viewer_id);
+                const creator = creatorById2.get(pu.creator_id);
+                return (
+                  <div key={pu.id} style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontWeight: 600 }}>
+                        {formatPowerUpType(pu.type)}
+                      </div>
+                      <CountdownTimer target={pu.expiry_at} />
+                    </div>
+                    <div style={{ fontSize: 13, color: '#666', marginTop: 6 }}>
+                      Creator: {creator?.display_name ?? pu.creator_id}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+                      Supporter: {holder?.display_name ?? pu.holder_viewer_id}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#777', marginTop: 4 }}>
+                      Awarded {rel(new Date(pu.awarded_at))}
+                    </div>
+                  </div>
+                );
+              })
+            )
+          ) : (
+            <p style={{ color: '#666' }}>
+              Upgrade to Pro to unlock real-time expiration countdowns and notifications for your roster.
+            </p>
+          )}
+        </div>
+      </section>
+
       {context.role !== Role.CREATOR && (
         <section style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <h2 style={{ fontSize: 20, fontWeight: 600 }}>Agency Overview</h2>
-            <a
-              href="/api/export/agencies"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: 14,
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: 10,
-                textDecoration: 'none',
-              }}
-            >
-              Export CSV
-            </a>
+            {proEnabled ? (
+              <a
+                href="/api/export/agencies"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 14,
+                  padding: '8px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: 10,
+                  textDecoration: 'none',
+                }}
+              >
+                Export CSV
+              </a>
+            ) : (
+              <span style={{ fontSize: 13, color: '#999' }}>Upgrade to export agency rosters</span>
+            )}
           </div>
           <div style={{ border: '1px solid #eee', borderRadius: 16, padding: 16 }}>
             {agencies.length === 0 && <p style={{ color: '#666' }}>No agencies connected yet.</p>}
@@ -345,21 +634,139 @@ export default async function Dashboard() {
       <section style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h2 style={{ fontSize: 20, fontWeight: 600 }}>Active Power-Ups</h2>
-          <a
-            href="/api/export/powerups"
-            target="_blank"
-            rel="noopener noreferrer"
+          {proEnabled ? (
+            <a
+              href="/api/export/powerups"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 14,
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                textDecoration: 'none'
+              }}
+            >
+              Export CSV
+            </a>
+          ) : (
+            <span style={{ fontSize: 13, color: '#999' }}>Upgrade to export inventory</span>
+          )}
+        </div>
+
+        {proEnabled ? (
+          <form
+            method="get"
             style={{
-              fontSize: 14,
-              padding: '8px 12px',
-              border: '1px solid #ddd',
-              borderRadius: 10,
-              textDecoration: 'none'
+              display: 'grid',
+              gap: 12,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              border: '1px solid #eee',
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 16,
+              background: '#fafbff',
             }}
           >
-            Export CSV
-          </a>
-        </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#555' }}>
+              <span>Creator</span>
+              <input
+                type="text"
+                name="creator"
+                placeholder="Name or ID"
+                defaultValue={rawFilters.creator}
+                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#555' }}>
+              <span>Supporter</span>
+              <input
+                type="text"
+                name="supporter"
+                placeholder="Name or ID"
+                defaultValue={rawFilters.supporter}
+                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#555' }}>
+              <span>Type</span>
+              <select
+                name="type"
+                defaultValue={normalizedTypeFilter}
+                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }}
+              >
+                <option value="">All types</option>
+                {powerupTypeOptions.map(option => (
+                  <option key={option} value={option}>
+                    {TYPE_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#555' }}>
+              <span>Expires After</span>
+              <input
+                type="datetime-local"
+                name="expiresAfter"
+                defaultValue={rawFilters.expiresAfter}
+                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#555' }}>
+              <span>Expires Before</span>
+              <input
+                type="datetime-local"
+                name="expiresBefore"
+                defaultValue={rawFilters.expiresBefore}
+                style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <button
+                type="submit"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#0B5FFF',
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Apply filters
+              </button>
+              <a
+                href="/dashboard"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid #ddd',
+                  background: '#fff',
+                  color: '#0B1220',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                }}
+              >
+                Reset
+              </a>
+            </div>
+          </form>
+        ) : (
+          <div
+            style={{
+              marginBottom: 16,
+              border: '1px dashed #ccd4eb',
+              borderRadius: 12,
+              padding: 16,
+              background: '#f7f9ff',
+              color: '#4a5a88',
+              fontSize: 13,
+            }}
+          >
+            Advanced filtering is part of the Pro toolkit. Upgrade to sift by creator, supporter, type, or expiration.
+          </div>
+        )}
 
         <div style={{ border: '1px solid #eee', borderRadius: 16, padding: 16 }}>
           {powerups.length === 0 && <p style={{ color: '#666' }}>No active power-ups.</p>}
@@ -369,7 +776,7 @@ export default async function Dashboard() {
             return (
               <div key={pu.id} style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 600 }}>{pu.type}</div>
+                  <div style={{ fontWeight: 600 }}>{formatPowerUpType(pu.type)}</div>
                   <div style={{ fontSize: 12, border: '1px solid #ddd', padding: '2px 8px', borderRadius: 999 }}>
                     {pu.active ? 'Active' : 'Inactive'}
                   </div>
@@ -381,7 +788,13 @@ export default async function Dashboard() {
                   Holder: {v?.display_name ?? pu.holder_viewer_id}
                 </div>
                 <div style={{ fontSize: 14 }}>
-                  Expires {rel(new Date(pu.expiry_at))}
+                  {proEnabled ? (
+                    <>
+                      Expires in <CountdownTimer target={pu.expiry_at} />
+                    </>
+                  ) : (
+                    <>Expires {rel(new Date(pu.expiry_at))}</>
+                  )}
                 </div>
                 <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>Source: {pu.source}</div>
               </div>

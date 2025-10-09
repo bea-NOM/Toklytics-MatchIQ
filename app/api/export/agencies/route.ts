@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server'
 import { Role, type PrismaClient } from '@prisma/client'
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma'
 import { getViewerContext } from '@/src/lib/viewer-context'
+import { getSubscriptionPlan, hasProAccess } from '@/src/lib/billing'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-function allowExport() {
-  const plan = process.env.BILLING_DEMO_PLAN ?? 'STARTER'
-  return plan === 'PRO' || plan === 'AGENCY'
-}
-
 export async function GET(req: Request) {
-  if (!allowExport()) {
+  const plan = getSubscriptionPlan()
+  if (!hasProAccess(plan)) {
     return NextResponse.json({ error: 'Export is Pro+ only' }, { status: 403 })
   }
 
