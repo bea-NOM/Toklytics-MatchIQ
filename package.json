@@ -19,7 +19,8 @@
     "prisma:resolve": "bash -lc 'set -a; source .env; set +a; pnpm prisma migrate resolve --applied 0000_baseline'",
     "prisma:migrate": "bash -lc 'set -a; source .env; set +a; pnpm prisma migrate dev -n continue_after_baseline'",
     "prisma:generate": "bash -lc 'set -a; source .env; set +a; pnpm prisma generate'",
-    "prisma:seed": "bash -lc 'set -a; source .env; set +a; pnpm prisma db seed'"
+    "prisma:seed": "bash -lc 'set -a; source .env; set +a; pnpm prisma db seed'",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
