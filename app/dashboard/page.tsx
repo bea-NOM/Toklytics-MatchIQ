@@ -2,6 +2,7 @@
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
 import { getSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
+import { deriveDashboardFilters } from '@/src/lib/dashboard-filters';
 import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
 import CountdownTimer from './countdown-timer';
@@ -125,41 +126,16 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   const accessibleCreatorIds =
     context.role === Role.ADMIN ? undefined : context.accessibleCreatorIds;
 
-  const readSearchParam = (key: string) => {
-    const value = searchParams?.[key];
-    if (Array.isArray(value)) return value[0] ?? '';
-    return value ?? '';
-  };
-
-  const rawFilters = {
-    creator: readSearchParam('creator').trim(),
-    supporter: readSearchParam('supporter').trim(),
-    type: readSearchParam('type').trim(),
-    expiresAfter: readSearchParam('expiresAfter').trim(),
-    expiresBefore: readSearchParam('expiresBefore').trim(),
-  };
-
-  const parseDate = (value: string) => {
-    if (!value) return undefined;
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  };
-
-  const normalizedTypeFilter = rawFilters.type ? rawFilters.type.toUpperCase() : '';
-
-  let creatorFilter: string | undefined;
-  let supporterFilter: string | undefined;
-  let typeFilter: string | undefined;
-  let expiresAfter: Date | undefined;
-  let expiresBefore: Date | undefined;
-
-  if (proEnabled) {
-    creatorFilter = rawFilters.creator || undefined;
-    supporterFilter = rawFilters.supporter || undefined;
-    typeFilter = normalizedTypeFilter || undefined;
-    expiresAfter = parseDate(rawFilters.expiresAfter);
-    expiresBefore = parseDate(rawFilters.expiresBefore);
-  }
+  const filterState = deriveDashboardFilters(searchParams, proEnabled);
+  const rawFilters = filterState.rawFilters;
+  const normalizedTypeFilter = filterState.normalizedTypeFilter;
+  const {
+    creatorFilter,
+    supporterFilter,
+    typeFilter,
+    expiresAfter,
+    expiresBefore,
+  } = filterState.parsedFilters;
 
   const powerupTypeOptions = Object.keys(PowerUpType) as Array<keyof typeof PowerUpType>;
 
