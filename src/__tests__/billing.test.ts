@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getSubscriptionPlan, hasProAccess, getPlanLabel } from '@/src/lib/billing'
+import { Role, Plan, SubStatus, type PrismaClient } from '@prisma/client'
+import { getSubscriptionPlan, hasProAccess, getPlanLabel, resolveSubscriptionPlan } from '@/src/lib/billing'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -30,5 +31,41 @@ describe('billing helpers', () => {
     expect(getSubscriptionPlan()).toBe('STARTER')
     expect(hasProAccess('STARTER')).toBe(false)
     expect(getPlanLabel('STARTER')).toBe('Starter')
+  })
+
+  it('falls back to env hint when context is missing', async () => {
+    vi.stubEnv('BILLING_DEMO_PLAN', 'agency')
+    const prisma = { subscriptions: { findFirst: vi.fn() } } as unknown as PrismaClient
+    const plan = await resolveSubscriptionPlan(prisma, null)
+    expect(plan).toBe('AGENCY')
+  })
+
+  it('returns agency for admin viewers without hitting the database', async () => {
+    const findFirst = vi.fn()
+    const prisma = { subscriptions: { findFirst } } as unknown as PrismaClient
+    const plan = await resolveSubscriptionPlan(prisma, {
+      role: Role.ADMIN,
+      userId: 'admin-id',
+    } as any)
+    expect(plan).toBe('AGENCY')
+    expect(findFirst).not.toHaveBeenCalled()
+  })
+
+  it('uses the active subscription record when available', async () => {
+    const findFirst = vi.fn().mockResolvedValue({
+      plan: Plan.PRO,
+      status: SubStatus.ACTIVE,
+      user_id: 'user-1',
+      agency_id: null,
+    })
+    const prisma = { subscriptions: { findFirst } } as unknown as PrismaClient
+    const plan = await resolveSubscriptionPlan(prisma, {
+      role: Role.CREATOR,
+      userId: 'user-1',
+      creatorId: 'creator-1',
+      accessibleCreatorIds: ['creator-1'],
+    } as any)
+    expect(plan).toBe('PRO')
+    expect(findFirst).toHaveBeenCalledOnce()
   })
 })

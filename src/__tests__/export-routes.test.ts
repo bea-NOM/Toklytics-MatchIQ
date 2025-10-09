@@ -9,12 +9,12 @@ afterEach(() => {
 })
 
 function mockCommonModules(overrides: {
-  billing?: { getSubscriptionPlan: () => string; hasProAccess: () => boolean }
+  billing?: { resolveSubscriptionPlan: ReturnType<typeof vi.fn>; hasProAccess: (plan: string) => boolean }
   viewerContext?: { getViewerContext: ReturnType<typeof vi.fn> }
   prisma?: { getPrismaClient: () => any }
 }) {
   const billing = overrides.billing ?? {
-    getSubscriptionPlan: () => 'PRO',
+    resolveSubscriptionPlan: vi.fn().mockResolvedValue('PRO'),
     hasProAccess: () => true,
   }
   const viewerContext = overrides.viewerContext ?? {
@@ -39,10 +39,14 @@ function mockCommonModules(overrides: {
 
 describe('export powerups route', () => {
   it('returns 403 when plan lacks pro access', async () => {
-    const getViewerContext = vi.fn()
+    const getViewerContext = vi.fn().mockResolvedValue({
+      role: Role.ADMIN,
+      userId: 'admin-id',
+    })
+    const resolveSubscriptionPlan = vi.fn().mockResolvedValue('STARTER')
     mockCommonModules({
       billing: {
-        getSubscriptionPlan: () => 'STARTER',
+        resolveSubscriptionPlan,
         hasProAccess: () => false,
       },
       viewerContext: { getViewerContext },
@@ -53,7 +57,8 @@ describe('export powerups route', () => {
 
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: 'Export is Pro+ only' })
-    expect(getViewerContext).not.toHaveBeenCalled()
+    expect(getViewerContext).toHaveBeenCalledOnce()
+    expect(resolveSubscriptionPlan).toHaveBeenCalledOnce()
   })
 
   it('returns CSV data for authorized users', async () => {
@@ -99,10 +104,14 @@ describe('export powerups route', () => {
 
 describe('export agencies route', () => {
   it('returns 403 when plan lacks pro access', async () => {
-    const getViewerContext = vi.fn()
+    const getViewerContext = vi.fn().mockResolvedValue({
+      role: Role.ADMIN,
+      userId: 'admin-id',
+    })
+    const resolveSubscriptionPlan = vi.fn().mockResolvedValue('STARTER')
     mockCommonModules({
       billing: {
-        getSubscriptionPlan: () => 'STARTER',
+        resolveSubscriptionPlan,
         hasProAccess: () => false,
       },
       viewerContext: { getViewerContext },
@@ -113,7 +122,8 @@ describe('export agencies route', () => {
 
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: 'Export is Pro+ only' })
-    expect(getViewerContext).not.toHaveBeenCalled()
+    expect(getViewerContext).toHaveBeenCalledOnce()
+    expect(resolveSubscriptionPlan).toHaveBeenCalledOnce()
   })
 
   it('includes aggregated counts for agencies', async () => {

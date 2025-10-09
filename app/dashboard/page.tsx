@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
-import { getSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
+import { resolveSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
 import { deriveDashboardFilters } from '@/src/lib/dashboard-filters';
 import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
@@ -114,7 +114,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
     );
   }
 
-  const plan = getSubscriptionPlan();
+  const plan = await resolveSubscriptionPlan(prisma, context);
   const planLabel = getPlanLabel(plan);
   const proEnabled = hasProAccess(plan);
 

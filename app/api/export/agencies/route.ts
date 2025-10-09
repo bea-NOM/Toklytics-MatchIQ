@@ -2,16 +2,11 @@ import { NextResponse } from 'next/server'
 import { Role, type PrismaClient } from '@prisma/client'
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma'
 import { getViewerContext } from '@/src/lib/viewer-context'
-import { getSubscriptionPlan, hasProAccess } from '@/src/lib/billing'
+import { resolveSubscriptionPlan, hasProAccess } from '@/src/lib/billing'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export async function GET(req: Request) {
-  const plan = getSubscriptionPlan()
-  if (!hasProAccess(plan)) {
-    return NextResponse.json({ error: 'Export is Pro+ only' }, { status: 403 })
-  }
-
   const context = await getViewerContext(req.headers)
   if (!context) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,6 +24,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Database connection not configured' }, { status: 503 })
     }
     throw error
+  }
+
+  const plan = await resolveSubscriptionPlan(prisma, context)
+  if (!hasProAccess(plan)) {
+    return NextResponse.json({ error: 'Export is Pro+ only' }, { status: 403 })
   }
 
   const agencyWhere = 'agencyId' in context ? { id: context.agencyId } : undefined
