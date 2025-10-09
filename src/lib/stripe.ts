@@ -14,7 +14,7 @@ export function getStripeClient(): Stripe {
 
   if (!stripeClient) {
     stripeClient = new Stripe(secret, {
-      apiVersion: '2024-11-20',
+      apiVersion: '2024-06-20',
     })
   }
 
