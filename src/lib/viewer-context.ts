@@ -38,54 +38,35 @@ export type ViewerContext =
 
 async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; roleHint?: Role } | null> {
   const headerStore = source ?? nextHeaders()
-  const headerUserId = headerStore.get('x-tok-user-id')
-  const headerRole = headerStore.get('x-tok-role') as Role | null
+  const rawTikTokId =
+    headerStore.get('x-tiktok-user-id') ??
+    headerStore.get('x-tiktok-id') ??
+    headerStore.get('x-tok-tiktok-id')
 
-  if (headerUserId) {
-    return { userId: headerUserId, roleHint: headerRole ?? undefined }
+  if (!rawTikTokId) {
+    return null
   }
 
-  const fallbackUserId = process.env.DEMO_USER_ID
-  if (fallbackUserId) {
-    return { userId: fallbackUserId as string, roleHint: headerRole ?? undefined }
+  const tikTokId = rawTikTokId.trim()
+  if (!tikTokId) {
+    return null
   }
 
   const prisma = prismaOrNull()
-
   if (!prisma) {
     return null
   }
 
-  const demoCreatorId = process.env.DEMO_CREATOR_ID
-  if (demoCreatorId) {
-    const creator = await prisma.creators.findUnique({
-      where: { id: demoCreatorId },
-      include: { user: true },
-    })
-    if (creator?.user) {
-      return { userId: creator.user.id, roleHint: RoleEnum.CREATOR }
-    }
-  }
-
-  const demoAgencyId = process.env.DEMO_AGENCY_ID
-  if (demoAgencyId) {
-    const agency = await prisma.agencies.findUnique({
-      where: { id: demoAgencyId },
-      include: { user: true },
-    })
-    if (agency?.user) {
-      return { userId: agency.user.id, roleHint: RoleEnum.AGENCY }
-    }
-  }
-
-  const creator = await prisma.creators.findFirst({
-    include: { user: true },
+  const user = await prisma.users.findUnique({
+    where: { tiktok_id: tikTokId },
+    select: { id: true, role: true },
   })
-  if (creator?.user) {
-    return { userId: creator.user.id, roleHint: RoleEnum.CREATOR }
+
+  if (!user) {
+    return null
   }
 
-  return null
+  return { userId: user.id, roleHint: user.role }
 }
 
 export async function getViewerContext(source?: HeaderLike): Promise<ViewerContext | null> {
