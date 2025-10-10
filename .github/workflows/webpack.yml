@@ -23,14 +23,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
+          standalone: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
