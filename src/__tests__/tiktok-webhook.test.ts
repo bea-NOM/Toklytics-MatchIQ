@@ -59,9 +59,9 @@ describe('TikTok webhook route', () => {
     expect(res.status).toBe(200)
     expect(json.ok).toBe(true)
   expect(fakeCreate).toHaveBeenCalled()
-  const calls = fakeCreate.mock.calls
+  const calls = (fakeCreate as any).mock.calls as any[]
   expect(calls.length).toBeGreaterThan(0)
-  const calledWith = calls[0][0]
+  const calledWith = calls[0]?.[0]
   expect(calledWith).toBeDefined()
   expect(calledWith.data.provider).toBe('tiktok')
   expect(calledWith.data.payload).toEqual({ event: 'test' })
