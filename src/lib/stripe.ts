@@ -6,6 +6,8 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY)
 }
 
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2024-06-20'
+
 export function getStripeClient(): Stripe {
   const secret = process.env.STRIPE_SECRET_KEY
   if (!secret) {
@@ -14,7 +16,7 @@ export function getStripeClient(): Stripe {
 
   if (!stripeClient) {
     stripeClient = new Stripe(secret, {
-      apiVersion: '2024-06-20',
+      apiVersion: STRIPE_API_VERSION,
     })
   }
 
