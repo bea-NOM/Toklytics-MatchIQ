@@ -231,7 +231,6 @@ model TikTokToken {
   updated_at    DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([tiktok_id])
-  @@map("tiktok_tokens")
 }
 
 // ── Subscriptions: owned by a user OR an agency (one of the two is set) ───────
