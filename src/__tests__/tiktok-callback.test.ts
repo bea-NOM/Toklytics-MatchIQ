@@ -38,8 +38,8 @@ describe('TikTok OAuth callback', () => {
     // mock prisma
     const fakeCreate = vi.fn(async (_args: any) => ({ id: '1' }))
     const fakePrisma = { tikTokToken: { create: fakeCreate } }
-  const prismaModule = await import('../lib/prisma')
-  vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
+    const prismaModule = await import('../lib/prisma')
+    vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
 
     // create request with code and matching state cookie
     const state = 'random-state-1'
