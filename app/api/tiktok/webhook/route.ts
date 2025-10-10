@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getPrismaClient } from '../../../../src/lib/prisma'
+import { captureException, captureMessage } from '../../../../src/lib/monitoring'
 
 function computeSignatures(secret: string, payload: string) {
   const hmac = crypto.createHmac('sha256', secret).update(payload).digest()
@@ -41,8 +42,12 @@ export async function POST(req: Request) {
       },
     })
 
+    // monitoring
+    captureMessage('tiktok.webhook.received', { signatureHeader })
+
     return NextResponse.json({ ok: true })
   } catch (err: any) {
+    captureException(err, { route: 'tiktok.webhook', signatureHeader })
     return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status: 500 })
   }
 }

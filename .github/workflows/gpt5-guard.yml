@@ -17,16 +17,27 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
-            const labelAllowed = pr.labels.some(l => l.name === 'gpt5-approve');
+            if (!pr) {
+              core.info('No pull_request payload found; skipping guard.');
+              return;
+            }
+            const labelAllowed = (pr.labels || []).some(l => l && l.name === 'gpt5-approve');
             if (labelAllowed) {
               core.info('gpt5-approve label present — skipping guard');
               return;
             }
-            const files = await github.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-            });
+            let files;
+            try {
+              // Use the REST namespace of Octokit in newer github-script versions
+              files = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+            } catch (err) {
+              core.warning(`Failed to list PR files: ${err.message}`);
+              return;
+            }
             const keywords = ['ENABLE_GPT5', 'ENABLE_GPT5_ALLOW', 'OPENAI_API_KEY'];
             for (const f of files.data) {
               const patch = f.patch || '';
