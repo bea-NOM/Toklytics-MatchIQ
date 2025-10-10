@@ -1,0 +1,3 @@
+# Code owners for dependency files
+/package.json @bea-NOM
+/pnpm-lock.yaml @bea-NOM

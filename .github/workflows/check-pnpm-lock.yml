@@ -1,0 +1,34 @@
+name: Check pnpm lockfile
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-lockfile:
+    name: Verify pnpm-lock.yaml matches package.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: '10'
+
+      - name: Verify lockfile is up-to-date
+        run: |
+          echo "Verifying pnpm-lock.yaml is up to date with package.json"
+          # This will fail (non-zero exit) if the lockfile doesn't match package.json
+          pnpm install --frozen-lockfile
+        shell: bash
+
+      - name: Friendly message on success
+        if: success()
+        run: echo "pnpm-lock.yaml matches package.json"

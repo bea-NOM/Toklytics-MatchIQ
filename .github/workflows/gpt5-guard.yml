@@ -1,0 +1,38 @@
+name: GPT-5 Merge Guard
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for GPT-5 env changes
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const labelAllowed = pr.labels.some(l => l.name === 'gpt5-approve');
+            if (labelAllowed) {
+              core.info('gpt5-approve label present — skipping guard');
+              return;
+            }
+            const files = await github.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            const keywords = ['ENABLE_GPT5', 'ENABLE_GPT5_ALLOW', 'OPENAI_API_KEY'];
+            for (const f of files.data) {
+              const patch = f.patch || '';
+              for (const kw of keywords) {
+                if (patch.includes(kw)) {
+                  core.setFailed(`PR modifies or adds ${kw}. Add label 'gpt5-approve' to bypass.`);
+                }
+              }
+            }

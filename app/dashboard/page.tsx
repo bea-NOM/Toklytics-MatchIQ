@@ -1,7 +1,8 @@
 // app/dashboard/page.tsx
 import { getPrismaClient, MissingDatabaseUrlError } from '@/src/lib/prisma';
 import { getViewerContext } from '@/src/lib/viewer-context';
-import { getSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
+import { resolveSubscriptionPlan, getPlanLabel, hasProAccess } from '@/src/lib/billing';
+import { deriveDashboardFilters } from '@/src/lib/dashboard-filters';
 import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
 import CountdownTimer from './countdown-timer';
@@ -107,13 +108,13 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – Battles</h1>
         <p style={{ marginTop: 16, color: '#666' }}>
-          Unable to resolve viewer context. Provide authentication headers or configure DEMO_USER_ID / DEMO_CREATOR_ID.
+          Unable to resolve viewer context. Make sure your request includes the X-TikTok-User-Id header for a logged in viewer.
         </p>
       </main>
     );
   }
 
-  const plan = getSubscriptionPlan();
+  const plan = await resolveSubscriptionPlan(prisma, context);
   const planLabel = getPlanLabel(plan);
   const proEnabled = hasProAccess(plan);
 
@@ -125,41 +126,16 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   const accessibleCreatorIds =
     context.role === Role.ADMIN ? undefined : context.accessibleCreatorIds;
 
-  const readSearchParam = (key: string) => {
-    const value = searchParams?.[key];
-    if (Array.isArray(value)) return value[0] ?? '';
-    return value ?? '';
-  };
-
-  const rawFilters = {
-    creator: readSearchParam('creator').trim(),
-    supporter: readSearchParam('supporter').trim(),
-    type: readSearchParam('type').trim(),
-    expiresAfter: readSearchParam('expiresAfter').trim(),
-    expiresBefore: readSearchParam('expiresBefore').trim(),
-  };
-
-  const parseDate = (value: string) => {
-    if (!value) return undefined;
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  };
-
-  const normalizedTypeFilter = rawFilters.type ? rawFilters.type.toUpperCase() : '';
-
-  let creatorFilter: string | undefined;
-  let supporterFilter: string | undefined;
-  let typeFilter: string | undefined;
-  let expiresAfter: Date | undefined;
-  let expiresBefore: Date | undefined;
-
-  if (proEnabled) {
-    creatorFilter = rawFilters.creator || undefined;
-    supporterFilter = rawFilters.supporter || undefined;
-    typeFilter = normalizedTypeFilter || undefined;
-    expiresAfter = parseDate(rawFilters.expiresAfter);
-    expiresBefore = parseDate(rawFilters.expiresBefore);
-  }
+  const filterState = deriveDashboardFilters(searchParams, proEnabled);
+  const rawFilters = filterState.rawFilters;
+  const normalizedTypeFilter = filterState.normalizedTypeFilter;
+  const {
+    creatorFilter,
+    supporterFilter,
+    typeFilter,
+    expiresAfter,
+    expiresBefore,
+  } = filterState.parsedFilters;
 
   const powerupTypeOptions = Object.keys(PowerUpType) as Array<keyof typeof PowerUpType>;
 
@@ -237,7 +213,10 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   const puCreatorIds = [...new Set(powerups.map(pu => pu.creator_id))];
 
   const viewers = viewerIds.length
-    ? await prisma.viewers.findMany({ where: { id: { in: viewerIds } } })
+    ? await prisma.viewers.findMany({
+        where: { id: { in: viewerIds } },
+        include: { user: { select: { handle: true } } },
+      })
     : [];
   const creators2 = puCreatorIds.length
     ? await prisma.creators.findMany({ where: { id: { in: puCreatorIds } } })
@@ -472,11 +451,16 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
           {plannerByCreator.size === 0 && <p style={{ color: '#666' }}>No active power-ups to plan around.</p>}
           {[...plannerByCreator.values()].map(bucket => {
             const makeList = (items: typeof powerups) =>
-              items.slice(0, 3).map(item => {
-                const viewer = viewerById.get(item.holder_viewer_id);
-                const label = viewer?.display_name ?? item.holder_viewer_id.slice(0, 6);
-                return `${formatPowerUpType(item.type as PowerUpType)} • ${label}`;
-              }).join(' · ');
+              items
+                .slice(0, 3)
+                .map(item => {
+                  const viewer = viewerById.get(item.holder_viewer_id);
+                  const handle = viewer?.user?.handle ? viewer.user.handle.replace(/^@/, '') : '';
+                  const label = viewer?.display_name ?? item.holder_viewer_id.slice(0, 6);
+                  const handleTag = handle ? ` (@${handle})` : '';
+                  return `${formatPowerUpType(item.type as PowerUpType)} • ${label}${handleTag}`;
+                })
+                .join(' · ');
 
             const recommendation = bucket.expiring24.length
               ? 'Run a match within 24h to capitalise on soon-to-expire boosts.'
@@ -535,6 +519,10 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
               expiringSoon.map(pu => {
                 const holder = viewerById.get(pu.holder_viewer_id);
                 const creator = creatorById2.get(pu.creator_id);
+                const handleSlug = holder?.user?.handle ? holder.user.handle.replace(/^@/, '').trim() : '';
+                const handleTag = handleSlug ? `@${handleSlug}` : '';
+                const supporterHref = handleSlug ? `https://www.tiktok.com/@${handleSlug}` : undefined;
+                const supporterLabel = holder?.display_name ?? pu.holder_viewer_id;
                 return (
                   <div key={pu.id} style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
@@ -547,7 +535,22 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
                       Creator: {creator?.display_name ?? pu.creator_id}
                     </div>
                     <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
-                      Supporter: {holder?.display_name ?? pu.holder_viewer_id}
+                      Supporter:{' '}
+                      {supporterHref ? (
+                        <a
+                          href={supporterHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#0B5FFF', textDecoration: 'none', fontWeight: 500 }}
+                        >
+                          {supporterLabel}
+                        </a>
+                      ) : (
+                        supporterLabel
+                      )}
+                      {handleTag ? (
+                        <span style={{ marginLeft: 6, color: '#999', fontSize: 11 }}>{handleTag}</span>
+                      ) : null}
                     </div>
                     <div style={{ fontSize: 12, color: '#777', marginTop: 4 }}>
                       Awarded {rel(new Date(pu.awarded_at))}
@@ -773,6 +776,10 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
           {powerups.map(pu => {
             const v = viewerById.get(pu.holder_viewer_id);
             const c = creatorById2.get(pu.creator_id);
+            const handleSlug = v?.user?.handle ? v.user.handle.replace(/^@/, '').trim() : '';
+            const handleTag = handleSlug ? `@${handleSlug}` : '';
+            const supporterHref = handleSlug ? `https://www.tiktok.com/@${handleSlug}` : undefined;
+            const supporterLabel = v?.display_name ?? pu.holder_viewer_id;
             return (
               <div key={pu.id} style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -785,7 +792,22 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
                   Creator: {c?.display_name ?? pu.creator_id}
                 </div>
                 <div style={{ color: '#666', fontSize: 14 }}>
-                  Holder: {v?.display_name ?? pu.holder_viewer_id}
+                  Holder:{' '}
+                  {supporterHref ? (
+                    <a
+                      href={supporterHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: '#0B5FFF', textDecoration: 'none', fontWeight: 500 }}
+                    >
+                      {supporterLabel}
+                    </a>
+                  ) : (
+                    supporterLabel
+                  )}
+                  {handleTag ? (
+                    <span style={{ marginLeft: 6, color: '#999', fontSize: 12 }}>{handleTag}</span>
+                  ) : null}
                 </div>
                 <div style={{ fontSize: 14 }}>
                   {proEnabled ? (
