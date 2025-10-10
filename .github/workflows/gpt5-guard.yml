@@ -1,5 +1,9 @@
 name: GPT-5 Merge Guard
 
+permissions:
+  pull-requests: read
+  contents: read
+
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
