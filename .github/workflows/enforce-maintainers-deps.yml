@@ -1,0 +1,56 @@
+name: Enforce maintainers for dependency changes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  require-maintainer:
+    name: Require maintainer to change deps
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get changed files
+        id: files
+        uses: tj-actions/changed-files@v34
+
+      - name: Determine if deps changed
+        id: deps
+        run: |
+          echo "FILES<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ steps.files.outputs.added_files }}" >> $GITHUB_OUTPUT
+          echo "${{ steps.files.outputs.modified_files }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          will_change=false
+          for f in ${{ steps.files.outputs.added_files }} ${{ steps.files.outputs.modified_files }}; do
+            if [[ "$f" == "package.json" ]] || [[ "$f" == "pnpm-lock.yaml" ]]; then
+              will_change=true
+            fi
+          done
+          echo "will_change=$will_change" >> $GITHUB_OUTPUT
+
+      - name: Fail if deps changed by non-maintainer
+        if: steps.deps.outputs.will_change == 'true'
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Dependency files changed in this PR. Verifying PR author is a maintainer..."
+          # check author's permission level
+          role=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$REPO/collaborators/$PR_AUTHOR/permission" | jq -r .permission)
+          echo "Author permission: $role"
+          if [[ "$role" == "admin" || "$role" == "maintain" || "$role" == "write" ]]; then
+            echo "Author is allowed to modify dependency files: $role"
+            exit 0
+          else
+            echo "ERROR: only maintainers can change package.json or pnpm-lock.yaml. Author: $PR_AUTHOR (permission: $role)"
+            exit 1
+          fi
+        shell: bash
