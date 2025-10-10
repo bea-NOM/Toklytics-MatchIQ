@@ -1,4 +1,4 @@
-import { FEATURE_FLAGS } from '../../config/feature-flags';
+import { isGpt5Enabled } from '../../config/feature-flags';
 
 /**
  * Minimal OpenAI client using fetch so we don't add new dependencies.
@@ -6,7 +6,7 @@ import { FEATURE_FLAGS } from '../../config/feature-flags';
  * requires the Chat Completions or a different API surface.
  */
 export function getModelName(): string {
-  if (FEATURE_FLAGS.enableGpt5) return 'gpt-5-preview';
+  if (isGpt5Enabled()) return 'gpt-5-preview';
   return 'gpt-4o-mini';
 }
 
