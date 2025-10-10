@@ -48,8 +48,8 @@ importers:
         specifier: ^3.3.0
         version: 3.5.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       stripe:
-        specifier: file:vendor/stripe-node
-        version: file:vendor/stripe-node(@types/node@20.19.17)
+        specifier: ^19.1.0
+        version: 19.1.0(@types/node@20.19.17)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -1930,8 +1930,8 @@ packages:
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
-  stripe@file:vendor/stripe-node:
-    resolution: {directory: vendor/stripe-node, type: directory}
+  stripe@19.1.0:
+    resolution: {integrity: sha512-FjgIiE98dMMTNssfdjMvFdD4eZyEzdWAOwPYqzhPRNZeg9ggFWlPXmX1iJKD5pPIwZBaPlC3SayQQkwsPo6/YQ==}
     engines: {node: '>=16'}
     peerDependencies:
       '@types/node': '>=16'
@@ -3978,7 +3978,7 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  stripe@file:vendor/stripe-node(@types/node@20.19.17):
+  stripe@19.1.0(@types/node@20.19.17):
     dependencies:
       qs: 6.14.0
     optionalDependencies:
