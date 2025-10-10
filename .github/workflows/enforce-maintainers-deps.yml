@@ -43,6 +43,14 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           echo "Dependency files changed in this PR. Verifying PR author is a maintainer..."
+          # allow common bot accounts (dependabot, renovate)
+          case "${PR_AUTHOR}" in
+            dependabot|"dependabot[bot]"|"dependabot-preview[bot]"|"renovate[bot]")
+              echo "Allowing bot author: ${PR_AUTHOR}"
+              exit 0
+              ;;
+          esac
+
           # check author's permission level
           role=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$REPO/collaborators/$PR_AUTHOR/permission" | jq -r .permission)
           echo "Author permission: $role"
