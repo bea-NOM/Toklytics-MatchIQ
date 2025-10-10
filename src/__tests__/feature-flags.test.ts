@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   isGpt5Enabled,
-  isGpt5EnabledForUser,
-  FEATURE_FLAGS,
+  isGpt5EnabledForUser
 } from '../../config/feature-flags';
 
 describe('feature-flags', () => {

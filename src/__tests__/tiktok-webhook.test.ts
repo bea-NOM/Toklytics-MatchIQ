@@ -41,8 +41,8 @@ describe('TikTok webhook route', () => {
     const sig = crypto.createHmac('sha256', key).update(payload).digest('base64')
 
   // mock prisma
-  const fakeCreate = vi.fn(async () => ({ id: '1' }))
-  const fakePrisma = { webhooks: { create: fakeCreate } }
+    const fakeCreate = vi.fn(async (_args: any) => ({ id: '1' }))
+      const fakePrisma = { webhooks: { create: fakeCreate } }
 
   // stub getPrismaClient to return fakePrisma
   const prismaModule = await import('../lib/prisma')

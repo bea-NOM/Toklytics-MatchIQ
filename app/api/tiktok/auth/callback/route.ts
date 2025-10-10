@@ -56,7 +56,7 @@ export async function GET(req: Request) {
     // const profile = await fetchProfile(accessToken)
 
     const prisma = getPrismaClient()
-    await prisma.tiktok_tokens.create({
+    await prisma.tikTokToken.create({
       data: {
         tiktok_id: openId,
         access_token: accessToken,
