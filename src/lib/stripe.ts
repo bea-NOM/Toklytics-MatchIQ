@@ -20,8 +20,11 @@ export function getStripeClient(): any {
     const Stripe = require('stripe')
     // Initialize without forcing an apiVersion string to avoid TypeScript
     // union literal mismatches between installed types and runtime expectations.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    stripeClient = new Stripe(secret)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+  // Cast Stripe to any at runtime to avoid TypeScript union-literal checks on apiVersion
+  // (some environments / deployed builds may have different @types/stripe versions).
+  const StripeAny = Stripe as any
+  stripeClient = new StripeAny(secret)
     return stripeClient
   } catch (err: any) {
     throw new Error('Stripe client not available: ' + String(err?.message || err))
