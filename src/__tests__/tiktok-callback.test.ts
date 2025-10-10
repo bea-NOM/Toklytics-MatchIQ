@@ -38,8 +38,8 @@ describe('TikTok OAuth callback', () => {
     // mock prisma
     const fakeCreate = vi.fn(async (_args: any) => ({ id: '1' }))
     const fakePrisma = { tikTokToken: { create: fakeCreate } }
-  const prismaModule = await import('../lib/prisma')
-  vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
+    const prismaModule = await import('../lib/prisma')
+    vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
 
     // create request with code and matching state cookie
     const state = 'random-state-1'
@@ -70,5 +70,58 @@ describe('TikTok OAuth callback', () => {
     const calledArgs = fakeCreate.mock.calls[0][0]
     expect(calledArgs.data.tiktok_id).toBe('tt-789')
     expect(calledArgs.data.access_token).toBe('at-123')
+  })
+
+  it('returns 400 when state is missing or does not match cookie', async () => {
+    process.env.TIKTOK_CLIENT_KEY = 'ck'
+    process.env.TIKTOK_CLIENT_SECRET = 'cs'
+    process.env.TIKTOK_REDIRECT_URI = 'https://example.test/api/tiktok/auth/callback'
+
+    // mock fetch should not be called
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock as any)
+
+    // mock prisma create should not be called
+    const fakeCreate = vi.fn()
+    const fakePrisma = { tikTokToken: { create: fakeCreate } }
+    const prismaModule = await import('../lib/prisma')
+    vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
+
+    // craft request with missing state cookie
+    const req = new Request('https://example.test/api/tiktok/auth/callback?code=thecode&state=xyz', { method: 'GET' })
+
+    const res = await GET(req as any)
+    expect(res.status).toBe(400)
+    const body = await (res as any).json()
+    expect(body.ok).toBe(false)
+    expect(fakeCreate).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when token exchange fails and does not write to DB', async () => {
+    process.env.TIKTOK_CLIENT_KEY = 'ck'
+    process.env.TIKTOK_CLIENT_SECRET = 'cs'
+    process.env.TIKTOK_REDIRECT_URI = 'https://example.test/api/tiktok/auth/callback'
+
+    // mock failing token exchange
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, _opts: any) => ({ ok: false, status: 500 }) as any))
+
+    // mock prisma create should not be called
+    const fakeCreate = vi.fn()
+    const fakePrisma = { tikTokToken: { create: fakeCreate } }
+    const prismaModule = await import('../lib/prisma')
+    vi.spyOn(prismaModule, 'getPrismaClient').mockImplementation(() => (fakePrisma as any))
+
+    const state = 'ok-state'
+    const req = new Request(`https://example.test/api/tiktok/auth/callback?code=thecode&state=${state}`, {
+      method: 'GET',
+      headers: { cookie: `tiktok_oauth_state=${state}` },
+    })
+
+    const res = await GET(req as any)
+    expect(res.status).toBe(500)
+    const body = await (res as any).json()
+    expect(body.ok).toBe(false)
+    expect(fakeCreate).not.toHaveBeenCalled()
   })
 })
