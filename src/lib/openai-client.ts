@@ -1,12 +1,12 @@
-import { isGpt5Enabled } from '../../config/feature-flags';
+import { isGpt5EnabledForUser } from '../../config/feature-flags';
 
 /**
  * Minimal OpenAI client using fetch so we don't add new dependencies.
  * This calls the Responses API. Update the endpoint or payload if your account
  * requires the Chat Completions or a different API surface.
  */
-export function getModelName(): string {
-  if (isGpt5Enabled()) return 'gpt-5-preview';
+export function getModelName(userId?: string): string {
+  if (isGpt5EnabledForUser(userId)) return 'gpt-5-preview';
   return 'gpt-4o-mini';
 }
 

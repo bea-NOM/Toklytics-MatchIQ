@@ -8,6 +8,10 @@ export const FEATURE_FLAGS = {
     (process.env.ENABLE_GPT5_ALLOW || 'false').toLowerCase() === 'true',
   // Deploy environment guard. Only allow on production by default.
   deployEnv: process.env.DEPLOY_ENV || process.env.NODE_ENV || 'development',
+  // Dev override: allows enabling GPT-5 for a whitelist of developer userIds
+  enableGpt5Dev: (process.env.ENABLE_GPT5_DEV || 'false').toLowerCase() === 'true',
+  // Comma-separated list of userIds allowed in dev override (optional)
+  gpt5DevAllowlist: (process.env.GPT5_DEV_ALLOWLIST || '').split(',').map(s => s.trim()).filter(Boolean),
 };
 
 export function isGpt5Enabled(): boolean {
@@ -17,6 +21,25 @@ export function isGpt5Enabled(): boolean {
     (FEATURE_FLAGS.deployEnv === 'production' ||
       FEATURE_FLAGS.deployEnv === 'prod')
   );
+}
+
+/**
+ * Returns true if GPT-5 is enabled for a given userId. This allows a dev override
+ * where specific userIds can be granted access when ENABLE_GPT5_DEV=true.
+ */
+export function isGpt5EnabledForUser(userId?: string): boolean {
+  // Production path
+  if (isGpt5Enabled()) return true;
+
+  // Dev override path: only if enabled and user is on allowlist (or allowlist empty -> allow all)
+  if (FEATURE_FLAGS.enableGpt5Dev) {
+    if (!userId) return true; // no userId provided -> allow for dev
+    const list = FEATURE_FLAGS.gpt5DevAllowlist;
+    if (list.length === 0) return true; // empty allowlist means allow all dev users
+    return list.includes(userId);
+  }
+
+  return false;
 }
 
 export type FeatureFlags = typeof FEATURE_FLAGS;
