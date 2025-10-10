@@ -16,26 +16,46 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Provide a safe core fallback if not injected by the runner
+            const coreSafe = (typeof core !== 'undefined') ? core : {
+              info: (m) => console.log(m),
+              warning: (m) => console.warn(m),
+              setFailed: (m) => { console.error(m); throw new Error(m) }
+            };
+
             const pr = context.payload.pull_request;
             if (!pr) {
-              core.info('No pull_request payload found; skipping guard.');
+              coreSafe.info('No pull_request payload found; skipping guard.');
               return;
             }
             const labelAllowed = (pr.labels || []).some(l => l && l.name === 'gpt5-approve');
             if (labelAllowed) {
-              core.info('gpt5-approve label present — skipping guard');
+              coreSafe.info('gpt5-approve label present — skipping guard');
               return;
             }
+
             let files;
             try {
-              // Use the REST namespace of Octokit in newer github-script versions
-              files = await github.rest.pulls.listFiles({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-              });
+              // Try the modern REST API first
+              if (github && github.rest && github.rest.pulls && typeof github.rest.pulls.listFiles === 'function') {
+                files = await github.rest.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                });
+              } else if (github && github.pulls && typeof github.pulls.listFiles === 'function') {
+                // Fallback for older github-script shapes
+                files = await github.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                });
+              } else {
+                coreSafe.warning('GitHub client does not expose pulls.listFiles; skipping guard.');
+                return;
+              }
             } catch (err) {
-              core.warning(`Failed to list PR files: ${err.message}`);
+              coreSafe.warning(`Failed to list PR files: ${err && err.message ? err.message : String(err)}`);
               return;
             }
             const keywords = ['ENABLE_GPT5', 'ENABLE_GPT5_ALLOW', 'OPENAI_API_KEY'];
@@ -43,7 +63,7 @@ jobs:
               const patch = f.patch || '';
               for (const kw of keywords) {
                 if (patch.includes(kw)) {
-                  core.setFailed(`PR modifies or adds ${kw}. Add label 'gpt5-approve' to bypass.`);
+                  coreSafe.setFailed(`PR modifies or adds ${kw}. Add label 'gpt5-approve' to bypass.`);
                 }
               }
             }
