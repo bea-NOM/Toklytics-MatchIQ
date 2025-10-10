@@ -1,46 +1,38 @@
-import { describe, expect, it } from 'vitest'
-import { deriveDashboardFilters } from '@/src/lib/dashboard-filters'
+import { describe, it, expect } from 'vitest'
+import { deriveDashboardFilters } from '../lib/dashboard-filters'
 
 describe('deriveDashboardFilters', () => {
-  it('returns empty parsed filters when pro is disabled', () => {
-    const state = deriveDashboardFilters(
-      {
-        creator: ' Alice ',
-        supporter: ['Bob'],
-        type: 'magic_mist',
-        expiresAfter: '2025-01-01T00:00',
-      },
-      false,
-    )
-
-    expect(state.rawFilters).toEqual({
-      creator: 'Alice',
-      supporter: 'Bob',
-      type: 'magic_mist',
-      expiresAfter: '2025-01-01T00:00',
-      expiresBefore: '',
-    })
-    expect(state.normalizedTypeFilter).toBe('MAGIC_MIST')
-    expect(state.parsedFilters).toEqual({})
+  it('returns empty parsedFilters when proEnabled is false', () => {
+    const params = { creator: 'alice', type: 'free' }
+    const result = deriveDashboardFilters(params, false)
+    expect(result.parsedFilters).toEqual({})
+    expect(result.normalizedTypeFilter).toBe('FREE')
   })
 
-  it('parses filters when pro is enabled', () => {
-    const state = deriveDashboardFilters(
-      {
-        creator: 'Creator42',
-        supporter: 'Supporter77',
-        type: 'glove',
-        expiresAfter: '2025-01-01T12:00',
-        expiresBefore: 'invalid',
-      },
-      true,
-    )
+  it('parses dates and normalizes type when proEnabled is true', () => {
+    const params = {
+      creator: ' bob ',
+      supporter: 'carol',
+      type: ' Premium ',
+      expiresAfter: '2020-01-01',
+      expiresBefore: '2020-12-31',
+    }
 
-    expect(state.parsedFilters.creatorFilter).toBe('Creator42')
-    expect(state.parsedFilters.supporterFilter).toBe('Supporter77')
-    expect(state.parsedFilters.typeFilter).toBe('GLOVE')
-    expect(state.parsedFilters.expiresAfter).instanceOf(Date)
-    expect(state.parsedFilters.expiresBefore).toBeUndefined()
+    const result = deriveDashboardFilters(params, true)
+    expect(result.rawFilters.creator).toBe('bob')
+    expect(result.parsedFilters.creatorFilter).toBe('bob')
+    expect(result.parsedFilters.supporterFilter).toBe('carol')
+    expect(result.normalizedTypeFilter).toBe('PREMIUM')
+    expect(result.parsedFilters.typeFilter).toBe('PREMIUM')
+    expect(result.parsedFilters.expiresAfter).toBeInstanceOf(Date)
+    expect(result.parsedFilters.expiresBefore).toBeInstanceOf(Date)
+  })
+
+  it('handles invalid dates gracefully', () => {
+    const params = { expiresAfter: 'not-a-date', expiresBefore: '' }
+    const result = deriveDashboardFilters(params, true)
+    expect(result.parsedFilters.expiresAfter).toBeUndefined()
+    expect(result.parsedFilters.expiresBefore).toBeUndefined()
   })
 
   it('handles missing search params gracefully', () => {

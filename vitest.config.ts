@@ -8,6 +8,7 @@ export default defineConfig({
     },
   },
   test: {
+    setupFiles: ['./vitest.setup.ts'],
     pool: 'forks',
     coverage: {
       provider: 'v8',
