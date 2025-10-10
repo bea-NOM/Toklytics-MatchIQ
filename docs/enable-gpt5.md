@@ -7,6 +7,8 @@ This document explains how to safely enable the GPT-5 (Preview) model for all cl
 - This repo contains a small feature-flag helper at `config/feature-flags.ts` that reads the environment variable `ENABLE_GPT5`.
 - When `ENABLE_GPT5=true`, `src/lib/ai-client.ts` will select `gpt-5-preview` as the model name. Replace that string with the exact model identifier you receive from OpenAI.
 
+Note: For safety this repo requires both `ENABLE_GPT5=true` and `ENABLE_GPT5_ALLOW=true` to be set in order to actually enable GPT-5. This prevents accidental enabling from a single mistaken var flip.
+
 ## Steps: OpenAI / provider side
 
 1. Request access to the GPT-5 preview from OpenAI (or your provider). This often requires joining a waitlist or getting invited to a preview program.
