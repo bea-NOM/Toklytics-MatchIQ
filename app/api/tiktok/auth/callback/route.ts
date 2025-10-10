@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getPrismaClient } from '../../../../../src/lib/prisma'
+import { captureException, captureMessage } from '../../../../../src/lib/monitoring'
 
 async function exchangeCodeForToken(clientKey: string, clientSecret: string, code: string, redirectUri: string) {
   const url = 'https://open-api.tiktok.com/platform/oauth/access_token/'
@@ -42,7 +43,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const tokenResp: any = await exchangeCodeForToken(clientKey, clientSecret, code, redirectUri)
+  const tokenResp: any = await exchangeCodeForToken(clientKey, clientSecret, code, redirectUri)
     // tokenResp expected to contain access_token, refresh_token, open_id (tiktok id)
     const accessToken = tokenResp.data?.access_token || tokenResp.access_token || tokenResp.data?.access_token
     const refreshToken = tokenResp.data?.refresh_token || tokenResp.refresh_token
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
     // const profile = await fetchProfile(accessToken)
 
     const prisma = getPrismaClient()
+    // note: Prisma model name is TikTokToken
     await prisma.tikTokToken.create({
       data: {
         tiktok_id: openId,
@@ -64,8 +66,11 @@ export async function GET(req: Request) {
       },
     })
 
+    captureMessage('tiktok.oauth.callback.success', { openId })
+
     return NextResponse.redirect('/')
   } catch (err: any) {
+    captureException(err, { route: 'tiktok.oauth.callback' })
     return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status: 500 })
   }
 }
