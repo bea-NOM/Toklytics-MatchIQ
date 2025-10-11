@@ -1,5 +1,9 @@
 name: GPT-5 Merge Guard
 
+permissions:
+  pull-requests: read
+  contents: read
+
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
@@ -7,6 +11,10 @@ on:
 jobs:
   guard:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,7 +63,20 @@ jobs:
                 return;
               }
             } catch (err) {
-              coreSafe.warning(`Failed to list PR files: ${err && err.message ? err.message : String(err)}`);
+              const msg = `Failed to list PR files: ${err && err.message ? err.message : String(err)}`;
+              coreSafe.warning(msg);
+              try {
+                // Post a comment on the PR to notify maintainers that the guard skipped enforcement
+                await github.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `GPT-5 guard skipped file inspection: ${msg}. The workflow token may lack permissions. Please verify the PR does not modify GPT-5 flags or add label 'gpt5-approve' to bypass.`,
+                });
+                coreSafe.info('Posted comment to PR about skipped guard.');
+              } catch (commentErr) {
+                coreSafe.warning(`Failed to post PR comment: ${commentErr && commentErr.message ? commentErr.message : String(commentErr)}`);
+              }
               return;
             }
             const keywords = ['ENABLE_GPT5', 'ENABLE_GPT5_ALLOW', 'OPENAI_API_KEY'];
