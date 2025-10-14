@@ -68,6 +68,7 @@ enum SubStatus {
 
 enum Plan {
   STARTER
+  BASIC
   PRO
   AGENCY
 }
