@@ -16,11 +16,11 @@
     "cron": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/jobs/cron.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "prisma:resolve": "bash -lc 'set -a; source .env; set +a; pnpm prisma migrate resolve --applied 0000_baseline'",
-    "prisma:migrate": "bash -lc 'set -a; source .env; set +a; pnpm prisma migrate dev -n continue_after_baseline'",
-    "prisma:generate": "bash -lc 'set -a; source .env; set +a; pnpm prisma generate'",
-    "prisma:seed": "bash -lc 'set -a; source .env; set +a; pnpm prisma db seed'",
-    "postinstall": "prisma generate"
+    "prisma:resolve": "bash -lc 'set -a; source .env; set +a; npx prisma migrate resolve --applied 0000_baseline'",
+    "prisma:migrate": "bash -lc 'set -a; source .env; set +a; npx prisma migrate dev -n continue_after_baseline'",
+    "prisma:generate": "bash -lc 'set -a; source .env; set +a; npx prisma generate'",
+    "prisma:seed": "bash -lc 'set -a; source .env; set +a; npx prisma db seed'",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
@@ -32,11 +32,11 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.441.0",
-  "next": "14.2.5",
+    "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "resend": "^3.3.0",
-  "stripe": "^19.1.0",
+    "stripe": "^19.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
