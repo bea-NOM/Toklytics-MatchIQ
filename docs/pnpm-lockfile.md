@@ -2,7 +2,7 @@ When you change dependencies in package.json
 
 Why this matters
 
-Vercel and many CI environments install dependencies with npm using the "frozen-lockfile" behavior by default. This prevents the install from modifying the lockfile during CI. If your local changes modify package.json without updating `package-lock.json`, CI will fail with an error like:
+Vercel and many CI environments install dependencies using npm (via `npm ci`) or other package managers and rely on a corresponding lockfile to remain unchanged during CI. If your local changes modify `package.json` without updating `package-lock.json`, CI may fail with an error like:
 
   npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync.
 
@@ -24,12 +24,12 @@ git commit -m "chore: regenerate package-lock.json to match package.json"
 git push
 ```
 
-3. Re-run CI / redeploy. Vercel and CI should now succeed since the lockfile and package manifest match.
+3. Re-run CI / redeploy. CI should now succeed since the lockfile and package manifest match.
 
 Best practices
 
-- Always run `npm install` and commit the updated `package-lock.json` whenever you change `package.json`.
-- Avoid committing `node_modules/` directories or other local package copies that can make lockfile entries point to local directories (`file:vendor/...`). Use published package versions when possible.
+- Always run `npm install` (or `npm ci` in CI) and commit the updated `package-lock.json` whenever you change `package.json`.
+- Avoid committing `vendor/` directories or other local package copies that can make lockfile entries point to local directories (`file:vendor/...`). Use published package versions when possible.
 - If CI still fails, try clearing the build cache or triggering a rebuild without cache via your CI provider / Vercel dashboard.
 
 Troubleshooting
