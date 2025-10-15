@@ -1,4 +1,4 @@
-name: Check pnpm lockfile
+name: Check npm lockfile
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   check-lockfile:
-    name: Verify pnpm-lock.yaml matches package.json
+    name: Verify package-lock.json matches package.json
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,19 +16,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: '10'
+          cache: 'npm'
 
       - name: Verify lockfile is up-to-date
         run: |
-          echo "Verifying pnpm-lock.yaml is up to date with package.json"
+          echo "Verifying package-lock.json is up to date with package.json"
           # This will fail (non-zero exit) if the lockfile doesn't match package.json
-          pnpm install --frozen-lockfile
+          npm ci
         shell: bash
 
       - name: Friendly message on success
         if: success()
-        run: echo "pnpm-lock.yaml matches package.json"
+        run: echo "package-lock.json matches package.json"
