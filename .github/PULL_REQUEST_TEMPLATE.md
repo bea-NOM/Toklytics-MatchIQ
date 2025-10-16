@@ -1,4 +1,4 @@
-## Summary
+# Summary
 
 If this PR changes dependencies (`package.json` or `package-lock.json`) please ensure:
 

@@ -92,7 +92,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
     if (error instanceof MissingDatabaseUrlError) {
       return (
         <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – Battles</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – MatchIQ</h1>
           <p style={{ marginTop: 16, color: '#666' }}>
             Database connection is not configured. Set the DATABASE_URL environment variable to view the dashboard.
           </p>
@@ -106,7 +106,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   if (!context) {
     return (
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – Battles</h1>
+        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – MatchIQ</h1>
         <p style={{ marginTop: 16, color: '#666' }}>
           Unable to resolve viewer context. Make sure your request includes the X-TikTok-User-Id header for a logged in viewer.
         </p>
@@ -296,7 +296,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
               color: '#4a5a88',
             }}
           >
-            Toklytics — Battles
+            Toklytics — MatchIQ
           </span>
           <h1 style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.2 }}>
             Everything you need to win TikTok battles
@@ -397,12 +397,12 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
               `https://calendar.google.com/calendar/render?action=TEMPLATE` +
               `&text=${encodeURIComponent(b.title)}` +
               `&dates=${toCal(start)}/${toCal(end)}` +
-              `&details=${encodeURIComponent('Toklytics – Battles')}`;
+              `&details=${encodeURIComponent('Toklytics – MatchIQ')}`;
 
             const outlook =
               `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent` +
               `&subject=${encodeURIComponent(b.title)}` +
-              `&body=${encodeURIComponent('Toklytics – Battles')}` +
+              `&body=${encodeURIComponent('Toklytics – MatchIQ')}` +
               `&startdt=${encodeURIComponent(start.toISOString())}` +
               `&enddt=${encodeURIComponent(end.toISOString())}`;
 

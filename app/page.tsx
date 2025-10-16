@@ -11,7 +11,7 @@ export default function Home() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <header style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: 40, fontWeight: 700, marginBottom: 16 }}>
-            Toklytics – Battles
+            Toklytics – MatchIQ
           </h1>
           <p style={{ fontSize: 18, opacity: 0.8 }}>
             The ultimate power-up tracker for LIVE battles.
@@ -60,7 +60,7 @@ export default function Home() {
             Terms of Service
           </h2>
           <p style={{ opacity: 0.8, marginBottom: 16 }}>
-            Review the latest Terms of Service for Toklytics – Battles, last
+            Review the latest Terms of Service for Toklytics – MatchIQ, last
             updated on January 1, 2025.
           </p>
           <a

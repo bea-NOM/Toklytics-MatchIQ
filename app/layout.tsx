@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <header style={{ padding: 16, borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a href="/" style={{ fontWeight: 700, fontSize: 18, color: 'inherit', textDecoration: 'none' }}>Toklytics — Battles</a>
+            <a href="/" style={{ fontWeight: 700, fontSize: 18, color: 'inherit', textDecoration: 'none' }}>Toklytics — MatchIQ</a>
           </div>
           <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {pro ? (

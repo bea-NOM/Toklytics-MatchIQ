@@ -23,12 +23,15 @@
     "postinstall": "npx prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.52",
     "@prisma/client": "^6.16.3",
     "@prisma/extension-accelerate": "^2.0.2",
     "@prisma/extension-optimize": "^2.0.0",
+    "@stripe/agent-toolkit": "^0.7.11",
     "@supabase/ssr": "0.7.0",
     "@supabase/supabase-js": "^2.45.0",
     "@tanstack/react-table": "^8.11.8",
+    "ai": "^5.0.72",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.441.0",
