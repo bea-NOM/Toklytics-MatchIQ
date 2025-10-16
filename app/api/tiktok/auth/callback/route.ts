@@ -52,18 +52,21 @@ export async function GET(req: Request) {
   }
 
   try {
-  const tokenResp: any = await exchangeCodeForToken(clientKey, clientSecret, code, redirectUri)
-    // tokenResp expected to contain access_token, refresh_token, open_id (tiktok id)
-    const accessToken = tokenResp.data?.access_token || tokenResp.access_token || tokenResp.data?.access_token
-    const refreshToken = tokenResp.data?.refresh_token || tokenResp.refresh_token
-    const openId = tokenResp.data?.open_id || tokenResp.open_id || tokenResp.data?.open_id
+    const tokenResp: any = await exchangeCodeForToken(clientKey, clientSecret, code, redirectUri)
+    
+    // TikTok v2 API returns tokens at the top level, not nested in data
+    const accessToken = tokenResp.access_token
+    const refreshToken = tokenResp.refresh_token
+    const openId = tokenResp.open_id
+    const expiresIn = tokenResp.expires_in
+    const scope = tokenResp.scope
 
     if (!accessToken || !openId) {
       throw new Error('missing token response fields')
     }
 
-    // Optional: fetch profile if you need additional info
-    // const profile = await fetchProfile(accessToken)
+    // Calculate expiration time
+    const expiresAt = new Date(Date.now() + (expiresIn * 1000))
 
     const prisma = getPrismaClient()
     // note: Prisma model name is TikTokToken
@@ -72,12 +75,15 @@ export async function GET(req: Request) {
         tiktok_id: openId,
         access_token: accessToken,
         refresh_token: refreshToken,
+        expires_at: expiresAt,
+        scope: scope,
       },
     })
 
     captureMessage('tiktok.oauth.callback.success', { openId })
 
-    return NextResponse.redirect('/')
+    // Redirect to dashboard after successful login
+    return NextResponse.redirect(new URL('/dashboard', req.url))
   } catch (err: any) {
     captureException(err, { route: 'tiktok.oauth.callback' })
     return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status: 500 })
