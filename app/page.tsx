@@ -14,7 +14,7 @@ export default function Home() {
             Toklytics – MatchIQ
           </h1>
           <p style={{ fontSize: 18, opacity: 0.8 }}>
-            The ultimate power-up tracker for LIVE battles.
+            Intelligence-driven analytics for TikTok LIVE battles.
           </p>
         </header>
 
