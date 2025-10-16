@@ -13,12 +13,12 @@ export async function GET(req: Request) {
     client_key: clientKey,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'open_id user.info.basic',
+    scope: 'user.info.basic',
     state,
   })
 
   // Store state in cookie for CSRF protection
-  const res = NextResponse.redirect(`https://open-api.tiktok.com/platform/oauth/connect/?${params.toString()}`)
-  res.cookies.set('tiktok_oauth_state', state, { httpOnly: true })
+  const res = NextResponse.redirect(`https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`)
+  res.cookies.set('tiktok_oauth_state', state, { httpOnly: true, maxAge: 600, sameSite: 'lax' })
   return res
 }

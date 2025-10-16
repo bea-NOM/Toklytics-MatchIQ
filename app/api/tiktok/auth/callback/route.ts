@@ -3,7 +3,7 @@ import { getPrismaClient } from '../../../../../src/lib/prisma'
 import { captureException, captureMessage } from '../../../../../src/lib/monitoring'
 
 async function exchangeCodeForToken(clientKey: string, clientSecret: string, code: string, redirectUri: string) {
-  const url = 'https://open-api.tiktok.com/platform/oauth/access_token/'
+  const url = 'https://open.tiktokapis.com/v2/oauth/token/'
   const body = new URLSearchParams({
     client_key: clientKey,
     client_secret: clientSecret,
@@ -12,8 +12,17 @@ async function exchangeCodeForToken(clientKey: string, clientSecret: string, cod
     redirect_uri: redirectUri,
   })
 
-  const res = await fetch(url, { method: 'POST', body })
-  if (!res.ok) throw new Error(`token exchange failed: ${res.status}`)
+  const res = await fetch(url, { 
+    method: 'POST', 
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body 
+  })
+  if (!res.ok) {
+    const errorText = await res.text()
+    throw new Error(`token exchange failed: ${res.status} - ${errorText}`)
+  }
   return res.json()
 }
 
