@@ -8,6 +8,7 @@ import { headers } from 'next/headers';
 import CountdownTimer from './countdown-timer';
 import PivotTable from './pivot-table';
 import ConnectTikTokButton from './connect-tiktok-button';
+import LiveTrackingControls from './live-tracking-controls';
 
 function rel(target: Date) {
   const diff = +target - Date.now();
@@ -472,6 +473,13 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
           </div>
         )}
       </section>
+
+      {/* Live Tracking Controls - Only show for connected creators */}
+      {tiktokToken && context.role === Role.CREATOR && (
+        <section style={{ marginTop: 24 }}>
+          <LiveTrackingControls />
+        </section>
+      )}
 
       <section style={{ marginTop: 24 }}>
         <div
