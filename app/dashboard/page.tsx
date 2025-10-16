@@ -87,6 +87,8 @@ type DashboardProps = {
 };
 
 export default async function Dashboard({ searchParams = {} }: DashboardProps) {
+  const oauthError = typeof searchParams.error === 'string' ? searchParams.error : null;
+  
   let prisma: PrismaClient;
   try {
     prisma = getPrismaClient();
@@ -109,6 +111,20 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
     return (
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>Toklytics – MatchIQ</h1>
+        
+        {oauthError && (
+          <div style={{ 
+            background: '#fee', 
+            border: '1px solid #fcc', 
+            borderRadius: 12, 
+            padding: 16,
+            marginBottom: 16,
+            color: '#c33'
+          }}>
+            <strong>Authentication Failed:</strong> {oauthError === 'access_denied' ? 'You denied access to the application.' : oauthError}
+          </div>
+        )}
+        
         <div style={{ 
           background: 'linear-gradient(135deg, #25f4ee 0%, #00f2ea 100%)',
           border: '2px solid #00d4d4',

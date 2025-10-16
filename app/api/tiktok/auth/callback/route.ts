@@ -38,6 +38,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
   const state = url.searchParams.get('state')
+  const error = url.searchParams.get('error')
+  const errorDescription = url.searchParams.get('error_description')
+
+  // Handle OAuth errors from TikTok
+  if (error) {
+    captureMessage('tiktok.oauth.callback.error', { error, errorDescription })
+    return NextResponse.redirect(new URL(`/dashboard?error=${encodeURIComponent(error)}`, req.url))
+  }
 
   const cookieState = req.headers.get('cookie')?.split(';').map(s => s.trim()).find(s => s.startsWith('tiktok_oauth_state='))?.split('=')[1]
   if (!code || !state || state !== cookieState) {
