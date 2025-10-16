@@ -6,6 +6,7 @@ import { deriveDashboardFilters } from '@/src/lib/dashboard-filters';
 import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
 import CountdownTimer from './countdown-timer';
+import PivotTable from './pivot-table';
 
 function rel(target: Date) {
   const diff = +target - Date.now();
@@ -630,6 +631,47 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* Pro Pivot Table */}
+      {proEnabled && powerups.length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Power-Up Analysis</h2>
+            <p style={{ color: '#666', fontSize: 14 }}>
+              Interactive pivot table - group and analyze your power-ups by type, expiration, supporter, or status
+            </p>
+          </div>
+          <PivotTable
+            powerups={powerups.map(pu => {
+              const expiryMs = new Date(pu.expiry_at).getTime()
+              const now = Date.now()
+              const diff = expiryMs - now
+              const hours = diff / (1000 * 60 * 60)
+              
+              let status: 'Active' | 'Expiring Soon' | 'Expires Today'
+              if (hours < 0) status = 'Expiring Soon'
+              else if (hours < 24) status = 'Expires Today'
+              else if (hours < 72) status = 'Expiring Soon'
+              else status = 'Active'
+
+              const viewer = viewerById.get(pu.holder_viewer_id)
+              const holderName = viewer?.display_name || 
+                                 viewer?.user?.handle || 
+                                 `@${pu.holder_viewer_id.slice(0, 8)}`
+
+              return {
+                id: pu.id,
+                type: pu.type,
+                expiry_at: pu.expiry_at,
+                holder_viewer_id: pu.holder_viewer_id,
+                holderName,
+                status
+              }
+            })}
+            typeLabels={TYPE_LABELS}
+          />
         </section>
       )}
 
