@@ -173,25 +173,25 @@ export default function Home() {
                   }}>
                     <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supporter</th>
                     <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Power-Up</th>
-                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator</th>
                     <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expires In</th>
                     <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { supporter: '@user_123', powerup: 'Shield', creator: '@creator_a', time: '2h 34m', status: 'Active', statusColor: '#4ade80' },
-                    { supporter: '@supporter_x', powerup: 'Boost', creator: '@creator_a', time: '5h 12m', status: 'Active', statusColor: '#4ade80' },
-                    { supporter: '@fan_789', powerup: 'Shield', creator: '@creator_b', time: '23m', status: 'Expiring', statusColor: '#fb923c' },
-                    { supporter: '@top_supporter', powerup: 'Crown', creator: '@creator_a', time: '1d 4h', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@sarah_battles', powerup: 'Magic Mist', time: '2h 34m', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@mike_gaming', powerup: 'Vault Glove', time: '5h 12m', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@fan_supporter', powerup: 'Time Maker', time: '23m', status: 'Expiring', statusColor: '#fb923c' },
+                    { supporter: '@top_donor', powerup: 'Stun Hammer', time: '1d 4h', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@battle_king', powerup: 'No.2 Booster', time: '45m', status: 'Expiring', statusColor: '#fb923c' },
+                    { supporter: '@loyal_fan', powerup: 'Glove', time: '3h 18m', status: 'Active', statusColor: '#4ade80' },
                   ].map((row, i) => (
                     <tr key={i} style={{ 
-                      borderBottom: i < 3 ? '1px solid rgba(157, 124, 232, 0.1)' : 'none',
+                      borderBottom: i < 5 ? '1px solid rgba(157, 124, 232, 0.1)' : 'none',
                       transition: 'background 0.2s'
                     }}>
                       <td style={{ padding: '16px', fontSize: 14, fontWeight: 600 }}>{row.supporter}</td>
                       <td style={{ padding: '16px', fontSize: 14 }}>{row.powerup}</td>
-                      <td style={{ padding: '16px', fontSize: 14, opacity: 0.8 }}>{row.creator}</td>
                       <td style={{ padding: '16px', fontSize: 14, fontWeight: 600, color: row.statusColor }}>{row.time}</td>
                       <td style={{ padding: '16px' }}>
                         <span style={{
