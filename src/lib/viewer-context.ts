@@ -38,35 +38,51 @@ export type ViewerContext =
 
 async function resolveUserId(source?: HeaderLike): Promise<{ userId: string; roleHint?: Role } | null> {
   const headerStore = source ?? nextHeaders()
+  
+  // Try to get TikTok ID from headers first
   const rawTikTokId =
     headerStore.get('x-tiktok-user-id') ??
     headerStore.get('x-tiktok-id') ??
     headerStore.get('x-tok-tiktok-id')
 
-  if (!rawTikTokId) {
-    return null
+  if (rawTikTokId) {
+    const tikTokId = rawTikTokId.trim()
+    if (tikTokId) {
+      const prisma = prismaOrNull()
+      if (!prisma) {
+        return null
+      }
+
+      const user = await prisma.users.findUnique({
+        where: { tiktok_id: tikTokId },
+        select: { id: true, role: true },
+      })
+
+      if (user) {
+        return { userId: user.id, roleHint: user.role }
+      }
+    }
   }
 
-  const tikTokId = rawTikTokId.trim()
-  if (!tikTokId) {
-    return null
+  // Development mode: allow direct user ID from query param (via header)
+  const devUserId = headerStore.get('x-dev-user-id')
+  if (devUserId && devUserId.trim()) {
+    const prisma = prismaOrNull()
+    if (!prisma) {
+      return null
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id: devUserId.trim() },
+      select: { id: true, role: true },
+    })
+
+    if (user) {
+      return { userId: user.id, roleHint: user.role }
+    }
   }
 
-  const prisma = prismaOrNull()
-  if (!prisma) {
-    return null
-  }
-
-  const user = await prisma.users.findUnique({
-    where: { tiktok_id: tikTokId },
-    select: { id: true, role: true },
-  })
-
-  if (!user) {
-    return null
-  }
-
-  return { userId: user.id, roleHint: user.role }
+  return null
 }
 
 export async function getViewerContext(source?: HeaderLike): Promise<ViewerContext | null> {

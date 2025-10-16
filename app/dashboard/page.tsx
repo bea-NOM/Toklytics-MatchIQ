@@ -108,10 +108,56 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   if (!context) {
     return (
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Toklytics – MatchIQ</h1>
-        <p style={{ marginTop: 16, color: '#666' }}>
-          Unable to resolve viewer context. Make sure your request includes the X-TikTok-User-Id header for a logged in viewer.
-        </p>
+        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>Toklytics – MatchIQ</h1>
+        <div style={{ 
+          background: '#fff3cd', 
+          border: '1px solid #ffc107', 
+          borderRadius: 12, 
+          padding: 20,
+          marginBottom: 16 
+        }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, color: '#856404' }}>
+            Authentication Required
+          </h2>
+          <p style={{ color: '#856404', lineHeight: 1.6, marginBottom: 12 }}>
+            This dashboard requires authentication. The app is designed to work within TikTok's ecosystem.
+          </p>
+          <div style={{ 
+            background: '#f8f9fa', 
+            border: '1px solid #dee2e6', 
+            borderRadius: 8, 
+            padding: 16,
+            marginTop: 16 
+          }}>
+            <p style={{ fontWeight: 600, marginBottom: 8 }}>For Development/Testing:</p>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
+              You can test the dashboard by adding a user ID parameter:
+            </p>
+            <code style={{ 
+              display: 'block',
+              background: '#fff', 
+              padding: 12, 
+              borderRadius: 6,
+              fontSize: 13,
+              fontFamily: 'monospace',
+              border: '1px solid #ddd'
+            }}>
+              /dashboard?id=YOUR_USER_ID
+            </code>
+          </div>
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <a 
+            href="/" 
+            style={{ 
+              color: '#0B5FFF', 
+              textDecoration: 'none',
+              fontWeight: 500 
+            }}
+          >
+            ← Back to Home
+          </a>
+        </div>
       </main>
     );
   }
