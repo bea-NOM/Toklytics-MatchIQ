@@ -119,6 +119,14 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   const planLabel = getPlanLabel(plan);
   const proEnabled = hasProAccess(plan);
 
+  // Check if user has linked TikTok account
+  const tiktokToken = context.role === Role.USER && 'userId' in context
+    ? await prisma.tikTokToken.findFirst({
+        where: { user_id: context.userId },
+        select: { id: true, tiktok_id: true, created_at: true }
+      })
+    : null;
+
   // base host for webcal:// (Apple iCal)
   const h = headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
@@ -328,6 +336,77 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
           )}
         </div>
       </header>
+
+      {/* TikTok Account Status Banner */}
+      <section style={{ marginTop: 24 }}>
+        {!tiktokToken ? (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #25f4ee 0%, #00f2ea 100%)',
+              border: '2px solid #00d4d4',
+              borderRadius: 16,
+              padding: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 16,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 250 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#0a0a0a', marginBottom: 6 }}>
+                🔗 Link Your TikTok Account
+              </div>
+              <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.5 }}>
+                Connect your TikTok account to start tracking power-ups and battles automatically.
+              </div>
+            </div>
+            <a
+              href="/api/tiktok/auth/start"
+              style={{
+                padding: '12px 24px',
+                borderRadius: 12,
+                background: '#0a0a0a',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 15,
+                textDecoration: 'none',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                transition: 'transform 0.2s',
+                display: 'inline-block',
+              }}
+            >
+              Connect TikTok
+            </a>
+          </div>
+        ) : (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              border: '2px solid #047857',
+              borderRadius: 16,
+              padding: 16,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
+                  TikTok Account Connected
+                </div>
+                <div style={{ fontSize: 13, color: '#d1fae5', marginTop: 2 }}>
+                  Linked on {new Date(tiktokToken.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       <section style={{ marginTop: 24 }}>
         <div
