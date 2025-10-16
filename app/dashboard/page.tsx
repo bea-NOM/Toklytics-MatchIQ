@@ -675,6 +675,53 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
         </section>
       )}
 
+      {/* Basic Subscription: Simple Status Filter */}
+      {!proEnabled && powerups.length > 0 && (
+        <section style={{ marginTop: 32, marginBottom: 16 }}>
+          <label 
+            htmlFor="status-filter" 
+            style={{ 
+              display: 'block', 
+              fontSize: 14, 
+              fontWeight: 500, 
+              marginBottom: 8,
+              color: '#374151'
+            }}
+          >
+            Filter by Status:
+          </label>
+          <select 
+            id="status-filter"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              backgroundColor: '#fff',
+              fontSize: 14,
+              cursor: 'pointer'
+            }}
+            onChange={(e) => {
+              if (typeof window === 'undefined') return;
+              const filter = e.target.value;
+              const rows = document.querySelectorAll('[data-powerup-row]');
+              rows.forEach((row: Element) => {
+                const htmlRow = row as HTMLElement;
+                if (filter === 'all' || htmlRow.dataset.powerupStatus === filter) {
+                  htmlRow.style.display = '';
+                } else {
+                  htmlRow.style.display = 'none';
+                }
+              });
+            }}
+          >
+            <option value="all">All Power-Ups</option>
+            <option value="active">Active</option>
+            <option value="expiring">Expiring Soon</option>
+            <option value="expires-today">Expires Today</option>
+          </select>
+        </section>
+      )}
+
       {/* Active Power-Ups */}
       <section style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -822,8 +869,26 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
             const handleTag = handleSlug ? `@${handleSlug}` : '';
             const supporterHref = handleSlug ? `https://www.tiktok.com/@${handleSlug}` : undefined;
             const supporterLabel = v?.display_name ?? pu.holder_viewer_id;
+            
+            // Calculate status for filtering
+            const expiryMs = new Date(pu.expiry_at).getTime();
+            const now = Date.now();
+            const diff = expiryMs - now;
+            const hours = diff / (1000 * 60 * 60);
+            
+            let statusValue: string;
+            if (hours < 0) statusValue = 'expiring';
+            else if (hours < 24) statusValue = 'expires-today';
+            else if (hours < 72) statusValue = 'expiring';
+            else statusValue = 'active';
+            
             return (
-              <div key={pu.id} style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <div 
+                key={pu.id} 
+                data-powerup-row="true"
+                data-powerup-status={statusValue}
+                style={{ border: '1px solid #f2f2f2', borderRadius: 12, padding: 12, marginBottom: 10 }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontWeight: 600 }}>{formatPowerUpType(pu.type)}</div>
                   <div style={{ fontSize: 12, border: '1px solid #ddd', padding: '2px 8px', borderRadius: 999 }}>
