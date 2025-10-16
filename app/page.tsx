@@ -89,6 +89,170 @@ export default function Home() {
           />
         </section>
 
+        {/* Dashboard Preview Section */}
+        <section style={{ marginTop: 80, marginBottom: 80 }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 style={{ 
+              fontSize: 42, 
+              fontWeight: 800, 
+              marginBottom: 16,
+              letterSpacing: '0.02em',
+              background: 'linear-gradient(135deg, #fff 0%, #9d7ce8 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Your Pro Dashboard
+            </h2>
+            <p style={{ fontSize: 18, opacity: 0.85, maxWidth: 700, margin: '0 auto' }}>
+              Get a complete view of all power-ups, expiration times, and battle analytics in one powerful interface.
+            </p>
+          </div>
+
+          <div style={{
+            background: "rgba(26, 31, 53, 0.6)",
+            borderRadius: 20,
+            border: "1px solid rgba(157, 124, 232, 0.3)",
+            backdropFilter: "blur(10px)",
+            padding: 32,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Mock Dashboard Header */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: 32,
+              paddingBottom: 24,
+              borderBottom: '1px solid rgba(157, 124, 232, 0.2)'
+            }}>
+              <div>
+                <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Power-Up Inventory</h3>
+                <p style={{ fontSize: 14, opacity: 0.7, margin: 0 }}>Track all active power-ups in real-time</p>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                gap: 12,
+                flexWrap: 'wrap'
+              }}>
+                <button style={{
+                  padding: '8px 16px',
+                  background: 'rgba(157, 124, 232, 0.15)',
+                  border: '1px solid rgba(157, 124, 232, 0.3)',
+                  borderRadius: 8,
+                  color: '#c4a9ff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}>
+                  Filter
+                </button>
+                <button style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(135deg, #9d7ce8 0%, #7b5fc4 100%)',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}>
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            {/* Mock Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ 
+                    borderBottom: '1px solid rgba(157, 124, 232, 0.2)',
+                    textAlign: 'left'
+                  }}>
+                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supporter</th>
+                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Power-Up</th>
+                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Creator</th>
+                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expires In</th>
+                    <th style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#9d7ce8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { supporter: '@user_123', powerup: 'Shield', creator: '@creator_a', time: '2h 34m', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@supporter_x', powerup: 'Boost', creator: '@creator_a', time: '5h 12m', status: 'Active', statusColor: '#4ade80' },
+                    { supporter: '@fan_789', powerup: 'Shield', creator: '@creator_b', time: '23m', status: 'Expiring', statusColor: '#fb923c' },
+                    { supporter: '@top_supporter', powerup: 'Crown', creator: '@creator_a', time: '1d 4h', status: 'Active', statusColor: '#4ade80' },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ 
+                      borderBottom: i < 3 ? '1px solid rgba(157, 124, 232, 0.1)' : 'none',
+                      transition: 'background 0.2s'
+                    }}>
+                      <td style={{ padding: '16px', fontSize: 14, fontWeight: 600 }}>{row.supporter}</td>
+                      <td style={{ padding: '16px', fontSize: 14 }}>{row.powerup}</td>
+                      <td style={{ padding: '16px', fontSize: 14, opacity: 0.8 }}>{row.creator}</td>
+                      <td style={{ padding: '16px', fontSize: 14, fontWeight: 600, color: row.statusColor }}>{row.time}</td>
+                      <td style={{ padding: '16px' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: `${row.statusColor}20`,
+                          color: row.statusColor
+                        }}>
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pro Badge */}
+            <div style={{
+              position: 'absolute',
+              top: 20,
+              right: 20,
+              padding: '6px 14px',
+              background: 'linear-gradient(135deg, #9d7ce8 0%, #7b5fc4 100%)',
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              boxShadow: '0 4px 12px rgba(138, 43, 226, 0.4)'
+            }}>
+              Pro Feature
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <a
+              href="/billing/upgrade"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "16px 48px",
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #9d7ce8 0%, #7b5fc4 100%)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 18,
+                textDecoration: "none",
+                letterSpacing: '0.05em',
+                boxShadow: '0 8px 24px rgba(138, 43, 226, 0.4)',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              UPGRADE TO PRO
+            </a>
+          </div>
+        </section>
+
         <section
           style={{
             marginTop: 64,
