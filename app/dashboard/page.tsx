@@ -110,41 +110,59 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
       <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>Toklytics – MatchIQ</h1>
         <div style={{ 
-          background: '#fff3cd', 
-          border: '1px solid #ffc107', 
+          background: 'linear-gradient(135deg, #25f4ee 0%, #00f2ea 100%)',
+          border: '2px solid #00d4d4',
+          borderRadius: 16,
+          padding: 24,
+          marginBottom: 16,
+          textAlign: 'center'
+        }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: '#0a0a0a' }}>
+            🎯 Welcome to Toklytics – MatchIQ
+          </h2>
+          <p style={{ color: '#1a1a1a', lineHeight: 1.6, marginBottom: 24, fontSize: 16 }}>
+            Sign in with your TikTok account to track power-ups, plan battles, and dominate the competition.
+          </p>
+          <a 
+            href="/api/tiktok/auth/start"
+            style={{
+              display: 'inline-block',
+              padding: '14px 32px',
+              borderRadius: 12,
+              background: '#0a0a0a',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: 16,
+              textDecoration: 'none',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              transition: 'transform 0.2s',
+            }}
+          >
+            Continue with TikTok
+          </a>
+        </div>
+        <div style={{ 
+          background: '#f8f9fa', 
+          border: '1px solid #dee2e6', 
           borderRadius: 12, 
           padding: 20,
           marginBottom: 16 
         }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, color: '#856404' }}>
-            Authentication Required
-          </h2>
-          <p style={{ color: '#856404', lineHeight: 1.6, marginBottom: 12 }}>
-            This dashboard requires authentication. The app is designed to work within TikTok's ecosystem.
+          <p style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>For Development/Testing:</p>
+          <p style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>
+            You can test the dashboard by adding a user ID parameter:
           </p>
-          <div style={{ 
-            background: '#f8f9fa', 
-            border: '1px solid #dee2e6', 
-            borderRadius: 8, 
-            padding: 16,
-            marginTop: 16 
+          <code style={{ 
+            display: 'block',
+            background: '#fff', 
+            padding: 12, 
+            borderRadius: 6,
+            fontSize: 13,
+            fontFamily: 'monospace',
+            border: '1px solid #ddd'
           }}>
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>For Development/Testing:</p>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
-              You can test the dashboard by adding a user ID parameter:
-            </p>
-            <code style={{ 
-              display: 'block',
-              background: '#fff', 
-              padding: 12, 
-              borderRadius: 6,
-              fontSize: 13,
-              fontFamily: 'monospace',
-              border: '1px solid #ddd'
-            }}>
-              /dashboard?id=YOUR_USER_ID
-            </code>
-          </div>
+            /dashboard?id=YOUR_USER_ID
+          </code>
         </div>
         <div style={{ marginTop: 24 }}>
           <a 
