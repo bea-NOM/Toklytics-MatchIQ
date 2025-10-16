@@ -296,7 +296,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
               color: '#4a5a88',
             }}
           >
-            Toklytics — MatchIQ
+            Toklytics – MatchIQ
           </span>
           <h1 style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.2 }}>
             Everything you need to win TikTok battles
