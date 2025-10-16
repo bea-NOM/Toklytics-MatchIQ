@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {pro ? (
               <a href="/dashboard" style={{ padding: '8px 12px', borderRadius: 8, background: '#0B5FFF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Dashboard</a>
             ) : (
-              <a href="/billing/upgrade" style={{ padding: '8px 12px', borderRadius: 8, background: '#ffd78f', color: '#0B1220', textDecoration: 'none', fontWeight: 700 }}>Upgrade $5.99</a>
+              <a href="/billing/upgrade" style={{ padding: '8px 12px', borderRadius: 8, background: '#0B5FFF', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>Subscribe</a>
             )}
             <a href="/privacy" style={{ color: '#444', textDecoration: 'none' }}>Privacy</a>
             <a href="/terms" style={{ color: '#444', textDecoration: 'none' }}>Terms</a>
