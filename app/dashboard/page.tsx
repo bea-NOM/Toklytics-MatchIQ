@@ -7,6 +7,7 @@ import { Role, Prisma, type PrismaClient, PowerUpType } from '@prisma/client';
 import { headers } from 'next/headers';
 import CountdownTimer from './countdown-timer';
 import PivotTable from './pivot-table';
+import ConnectTikTokButton from './connect-tiktok-button';
 
 function rel(target: Date) {
   const diff = +target - Date.now();
@@ -119,8 +120,8 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
   const planLabel = getPlanLabel(plan);
   const proEnabled = hasProAccess(plan);
 
-  // Check if user has linked TikTok account
-  const tiktokToken = context.role === Role.USER && 'userId' in context
+  // Check if user has linked TikTok account (CREATOR role only)
+  const tiktokToken = context.role === Role.CREATOR && 'userId' in context
     ? await prisma.tikTokToken.findFirst({
         where: { user_id: context.userId },
         select: { id: true, tiktok_id: true, created_at: true }
@@ -361,23 +362,7 @@ export default async function Dashboard({ searchParams = {} }: DashboardProps) {
                 Connect your TikTok account to start tracking power-ups and battles automatically.
               </div>
             </div>
-            <a
-              href="/api/tiktok/auth/start"
-              style={{
-                padding: '12px 24px',
-                borderRadius: 12,
-                background: '#0a0a0a',
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: 15,
-                textDecoration: 'none',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                transition: 'transform 0.2s',
-                display: 'inline-block',
-              }}
-            >
-              Connect TikTok
-            </a>
+            <ConnectTikTokButton />
           </div>
         ) : (
           <div
